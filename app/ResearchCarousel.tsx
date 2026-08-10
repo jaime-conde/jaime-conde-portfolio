@@ -51,7 +51,7 @@ export default function ResearchCarousel() {
           >
             <object
               className="poster-viewer"
-              data={`${posterUrl}#view=FitH&toolbar=0`}
+              data={`${posterUrl}#zoom=page-width&toolbar=0&navpanes=0`}
               type="application/pdf"
               aria-label="Scrollable computational analysis research poster preview"
               tabIndex={activeSlide === 0 ? 0 : -1}
