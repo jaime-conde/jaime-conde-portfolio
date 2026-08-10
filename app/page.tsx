@@ -1,6 +1,7 @@
 import StructuralTelemetry from "./StructuralTelemetry";
 import ResearchCarousel from "./ResearchCarousel";
 import LugCarousel from "./LugCarousel";
+import AeroponicsGallery from "./AeroponicsGallery";
 
 const projects = [
   {
@@ -38,13 +39,13 @@ const projects = [
     stage: "Stage 03 · Sustainable Systems",
     title: "Designing a modular, replicable aeroponic system",
     description:
-      "Designed modular food-grade PETG components and supported construction, documentation, and replication planning within a $500 project budget. The system applies low-cost aeroponic methods to a sustainability-focused effort addressing food insecurity.",
+      "Designed modular food-grade PETG components and supported construction, documentation, purchasing, and replication planning for a low-cost aeroponic tower. The team organized the build around a six-week schedule, documented risks and responsibilities, and tested automation while developing a sustainability-focused system intended to address food insecurity.",
     metrics: [
-      ["$500", "project budget"],
-      ["PETG", "food-grade components"],
-      ["Modular", "replication strategy"],
+      ["$646", "estimated total cost"],
+      ["$301", "remaining after supplies"],
+      ["6 weeks", "planned build schedule"],
     ],
-    tags: ["CAD design", "3D printing", "Prototyping", "Sustainability"],
+    tags: ["CAD design", "3D printing", "Budget planning", "Team organization", "Sustainability"],
     mediaLabel: "Add system image",
     mediaHint: "CAD assembly · printed components · completed system",
   },
@@ -204,6 +205,8 @@ export default function Home() {
             <ResearchCarousel />
           ) : project.id === "design" ? (
             <LugCarousel />
+          ) : project.id === "aeroponics" ? (
+            <AeroponicsGallery />
           ) : (
             <div className="project-media" aria-label={`${project.mediaLabel} placeholder`}>
               <div className="media-corners" aria-hidden="true" />
