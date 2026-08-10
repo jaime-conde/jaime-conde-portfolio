@@ -392,7 +392,7 @@ a { color: inherit; text-decoration: none; }
 }
 .aeroponics-viewport {
   position: relative;
-  height: clamp(460px, 58vw, 680px);
+  height: clamp(360px, 46vw, 520px);
   overflow: hidden;
   background: #050c18;
 }
@@ -407,10 +407,18 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   height: 100%;
   margin: 0;
+  padding: clamp(22px, 4vw, 48px);
   display: grid;
   place-items: center;
 }
-.aeroponics-slide img { width: 100%; height: 100%; object-fit: contain; }
+.aeroponics-slide img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 760px);
+  max-height: 100%;
+  object-fit: contain;
+}
 .aeroponics-counter {
   position: absolute;
   right: 18px;
@@ -555,7 +563,8 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
   .project-media { margin-top: 38px; aspect-ratio: 4 / 3; }
   .research-carousel { margin-top: 38px; }
   .aeroponics-showcase { margin-top: 38px; }
-  .aeroponics-viewport { height: clamp(390px, 110vw, 560px); }
+  .aeroponics-viewport { height: clamp(320px, 88vw, 440px); }
+  .aeroponics-slide { padding: 18px; }
   .project-document-heading { grid-template-columns: 1fr; align-items: start; padding: 20px 16px; }
   .document-actions { justify-content: flex-start; }
   .project-document-viewer { height: clamp(520px, 145vw, 720px); }
