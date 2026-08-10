@@ -65,6 +65,21 @@ const projects = [
     mediaLabel: "Add rocket image",
     mediaHint: "Inventor model · assembly context · avionics layout",
   },
+  {
+    id: "turbojet",
+    stage: "Stage 05 · Propulsion Development",
+    title: "Developing an annular combustor for a small turbojet",
+    description:
+      "An independent, in-progress propulsion project focused on designing an annular combustion system for a small turbojet. I am developing the combustor geometry and working through the airflow, fuel delivery, flame-stabilization, cooling, and dilution-zone decisions required before fabrication and safe testing.",
+    metrics: [
+      ["Annular", "combustor architecture"],
+      ["CAD", "geometry development"],
+      ["In progress", "design status"],
+    ],
+    tags: ["Propulsion", "Combustor design", "Thermodynamics", "CAD", "Design calculations"],
+    mediaLabel: "Turbojet design documentation coming next",
+    mediaHint: "Combustor CAD · flow-path calculations · development progress",
+  },
 ];
 
 const experience = [
@@ -129,8 +144,9 @@ export default function Home() {
         <a href="#design">03</a>
         <a href="#aeroponics">04</a>
         <a href="#rocket">05</a>
-        <a href="#experience">06</a>
-        <a href="#contact">07</a>
+        <a href="#turbojet">06</a>
+        <a href="#experience">07</a>
+        <a href="#contact">08</a>
       </nav>
 
       <section className="hero shell" id="launch">
@@ -146,7 +162,7 @@ export default function Home() {
           </p>
           <p className="intro">
             My work spans molecular catalyst modeling, stress-driven lightweighting,
-            sustainable systems, and student rocket structures. I am preparing to transfer
+            sustainable systems, student rocket structures, and early-stage propulsion design. I am preparing to transfer
             in Spring 2027 and pursue aerospace research in aerostructures and advanced
             manufacturing.
           </p>
@@ -228,7 +244,7 @@ export default function Home() {
       <section className="experience shell" id="experience">
         <div className="stage-label"><b>▮</b> Development · Experience & Leadership</div>
         <div className="section-heading">
-          <p>06 / EXPERIENCE</p>
+          <p>07 / EXPERIENCE</p>
           <h2>Leading in the shop,<br />the field, and the classroom.</h2>
         </div>
         <div className="timeline">
