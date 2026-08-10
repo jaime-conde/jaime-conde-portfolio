@@ -69,15 +69,15 @@ const projects = [
   {
     id: "turbojet",
     stage: "Stage 05 · Propulsion Development",
-    title: "Developing an annular combustor for a small turbojet",
+    title: "Annular-combustor turbojet with lobed ejector augmentation",
     description:
-      "An independent, in-progress propulsion project focused on designing an annular combustion system for a small turbojet. I am developing the combustor geometry and working through the airflow, fuel delivery, flame-stabilization, cooling, and dilution-zone decisions required before fabrication and safe testing.",
+      "An independent, in-progress turbojet project combining an annular combustion system with a lobed ejector concept for the exhaust and afterburner section. I am developing the flower-shaped ejector geometry to improve exhaust mixing and entrain additional ambient air while working through airflow, fuel delivery, flame stabilization, cooling, and dilution-zone decisions before fabrication and safe testing.",
     metrics: [
       ["Annular", "combustor architecture"],
-      ["CAD", "geometry development"],
+      ["Lobed ejector", "augmentation concept"],
       ["In progress", "design status"],
     ],
-    tags: ["Propulsion", "Combustor design", "Thermodynamics", "CAD", "Design calculations"],
+    tags: ["Propulsion", "Combustor design", "Ejector augmentation", "Thermodynamics", "CAD", "Design calculations"],
     mediaLabel: "Turbojet design documentation coming next",
     mediaHint: "Combustor CAD · flow-path calculations · development progress",
   },
