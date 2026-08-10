@@ -53,17 +53,17 @@ const projects = [
   {
     id: "rocket",
     stage: "Stage 04 · Flight Systems",
-    title: "Developing structures for an IREC 10k COTS rocket",
+    title: "Designing the nose cone for an IREC 10k COTS rocket",
     description:
-      "Designed nose-cone and transition structures in SolidWorks for a 10k COTS IREC competition rocket. Within a 20-plus-member engineering team, I contributed to mass-distribution analysis, structural integration, and flight-stability validation.",
+      "Designed the rocket nose cone in Autodesk Inventor and served as design lead for a six-person team within Rocket Tech GSU's 20-plus-member club. I coordinated design work and supported the nose cone's integration with the rocket assembly for the IREC 10k COTS competition.",
     metrics: [
       ["10k", "competition class"],
-      ["20+", "team members"],
-      ["2", "flight structures designed"],
+      ["6", "design team members"],
+      ["20+", "club members"],
     ],
-    tags: ["SolidWorks", "Rocket structures", "Mass distribution", "Flight stability"],
+    tags: ["Autodesk Inventor", "Nose-cone design", "Design leadership", "Rocket integration"],
     mediaLabel: "Add rocket image",
-    mediaHint: "SolidWorks model · assembled rocket · team test",
+    mediaHint: "Inventor model · assembly context · avionics layout",
   },
 ];
 
@@ -238,43 +238,3 @@ export default function Home() {
               <div>
                 <h3>{item.role}</h3>
                 <p className="place">{item.place}</p>
-                <p>{item.detail}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="payload shell">
-        <div className="section-heading">
-          <p>METHODS / TOOLKIT</p>
-          <h2>Tools for turning questions into testable designs.</h2>
-        </div>
-        <div className="skill-grid">
-          {skills.map((skill, index) => <span key={skill}><b>{String(index + 1).padStart(2, "0")}</b>{skill}</span>)}
-        </div>
-      </section>
-
-      <section className="contact shell" id="contact">
-        <p className="eyebrow">Next iteration · New collaboration</p>
-        <h2>Let’s build something that earns its way onto the aircraft.</h2>
-        <p>
-          Open to undergraduate research, aerospace design projects, and engineering
-          opportunities in the Atlanta area.
-        </p>
-        <div className="hero-actions" style={{ justifyContent: "center" }}>
-          <a className="button primary" href="mailto:jaime.conde.acos@gmail.com">Email me</a>
-          <a className="button" href="https://www.linkedin.com/in/jaime-conde1/" target="_blank" rel="noreferrer">LinkedIn</a>
-        </div>
-        <div className="contact-meta">
-          <span>Jaime Conde</span><span>Atlanta, Georgia</span><span>English · Español</span>
-        </div>
-      </section>
-
-      <footer className="shell">
-        <span>© 2026 Jaime Conde</span>
-        <a href="#launch">Return to top ↑</a>
-      </footer>
-    </main>
-  );
-}
