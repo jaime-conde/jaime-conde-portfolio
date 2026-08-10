@@ -6,22 +6,16 @@ const base = "/jaime-conde-portfolio/images/";
 
 const slides = [
   {
-    src: `${base}Hydroponics Tower Lettuce Seedlings Transplanted.jpg`,
-    alt: "Lettuce seedlings transplanted into the aeroponic tower",
-    title: "Seedlings transplanted",
-    detail: "Early system setup with lettuce seedlings placed into the modular tower.",
+    src: `${base}aeroponic-seedlings-results.webp`,
+    alt: "Side-by-side comparison of newly transplanted lettuce and the mature aeroponic tower results",
+    title: "Seedlings to results",
+    detail: "A side-by-side view of the tower after transplanting and after sustained plant growth.",
   },
   {
-    src: `${base}Hydroponics Tower Automation Attempt.jpg`,
+    src: `${base}aeroponic-automation-landscape.webp`,
     alt: "Automation hardware being tested on the aeroponic tower",
     title: "Automation attempt",
     detail: "Testing the controls and hardware intended to automate system operation.",
-  },
-  {
-    src: `${base}Hydroponics Tower Lettuce Results.jpg`,
-    alt: "Lettuce growing from the completed aeroponic tower",
-    title: "Lettuce results",
-    detail: "Plant growth produced by the assembled tower after transplanting and testing.",
   },
 ];
 
