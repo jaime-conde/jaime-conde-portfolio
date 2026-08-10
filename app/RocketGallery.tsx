@@ -3,23 +3,23 @@ const base = "/jaime-conde-portfolio/images/";
 const views = [
   {
     src: `${base}Cross Section Cone.png`,
-    alt: "Dimensioned SolidWorks cross-section of the IREC rocket nose cone and transition geometry",
+    alt: "Dimensioned Autodesk Inventor cross-section of the IREC rocket nose cone",
     label: "01 · Profile geometry",
-    caption: "Dimensioned nose-cone and transition profile",
+    caption: "My dimensioned nose-cone design",
     className: "rocket-view rocket-view-profile",
   },
   {
     src: `${base}Assembly.png`,
-    alt: "Transparent SolidWorks assembly showing the rocket nose cone and integrated avionics bay",
-    label: "02 · Structural integration",
-    caption: "Nose-cone, transition, and avionics assembly",
+    alt: "Team rocket assembly showing the nose cone and integrated avionics bay",
+    label: "02 · Team integration context",
+    caption: "Nose cone within the team rocket assembly",
     className: "rocket-view",
   },
   {
     src: `${base}Avionics_Bay.png`,
-    alt: "Detailed SolidWorks rendering of the IREC rocket avionics bay",
-    label: "03 · Avionics packaging",
-    caption: "Internal avionics-bay component arrangement",
+    alt: "Team rendering of the IREC rocket avionics bay",
+    label: "03 · Team system context",
+    caption: "Internal avionics-bay arrangement",
     className: "rocket-view",
   },
 ];
@@ -30,11 +30,11 @@ export default function RocketGallery() {
       <div className="rocket-gallery-heading">
         <div>
           <span className="gallery-label">CAD DESIGN RECORD / IREC 10K COTS</span>
-          <h3 id="rocket-gallery-title">From profile geometry to integrated flight hardware</h3>
+          <h3 id="rocket-gallery-title">Nose-cone design within the full rocket assembly</h3>
         </div>
         <p>
-          Three SolidWorks views document the nose-cone profile, full structural assembly,
-          and avionics packaging without cropping the tall geometry.
+          My Autodesk Inventor nose-cone model is shown alongside team assembly and avionics
+          views to document its integration context without overstating my individual scope.
         </p>
       </div>
 
