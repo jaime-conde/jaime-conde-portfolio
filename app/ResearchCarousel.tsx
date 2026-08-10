@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const posterUrl =
   "/jaime-conde-portfolio/images/Computational%20analysis%20of%20metal%20effects%20on%20ethylene%20insertion%20in%20Group%204%20metallocene%20analogs.pdf";
@@ -8,6 +8,14 @@ const posterUrl =
 export default function ResearchCarousel() {
   const [activeSlide, setActiveSlide] = useState(0);
   const slideCount = 2;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % slideCount);
+    }, 6000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   const move = (direction: number) => {
     setActiveSlide((current) => (current + direction + slideCount) % slideCount);
