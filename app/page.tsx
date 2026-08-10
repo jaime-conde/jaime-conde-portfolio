@@ -1,5 +1,6 @@
 import StructuralTelemetry from "./StructuralTelemetry";
 import ResearchCarousel from "./ResearchCarousel";
+import LugCarousel from "./LugCarousel";
 
 const projects = [
   {
@@ -201,7 +202,8 @@ export default function Home() {
           </div>
           {project.id === "research" ? (
             <ResearchCarousel />
-
+          ) : project.id === "design" ? (
+            <LugCarousel />
           ) : (
             <div className="project-media" aria-label={`${project.mediaLabel} placeholder`}>
               <div className="media-corners" aria-hidden="true" />
