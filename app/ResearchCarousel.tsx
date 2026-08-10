@@ -7,15 +7,18 @@ const posterUrl =
 
 export default function ResearchCarousel() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isInteracting, setIsInteracting] = useState(false);
   const slideCount = 2;
 
   useEffect(() => {
+    if (isInteracting) return;
+
     const timer = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % slideCount);
     }, 6000);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [isInteracting]);
 
   const move = (direction: number) => {
     setActiveSlide((current) => (current + direction + slideCount) % slideCount);
@@ -41,22 +44,22 @@ export default function ResearchCarousel() {
             className="carousel-slide poster-slide"
             aria-hidden={activeSlide !== 0}
             aria-label="Research poster, slide 1 of 2"
+            onPointerEnter={() => setIsInteracting(true)}
+            onPointerLeave={() => setIsInteracting(false)}
+            onFocusCapture={() => setIsInteracting(true)}
+            onBlurCapture={() => setIsInteracting(false)}
           >
-            <a
-              className="poster-download"
-              href={posterUrl}
-              download="Jaime-Conde-SURS-Research-Poster.pdf"
-              aria-label="Download Jaime Conde's computational chemistry research poster"
+            <object
+              className="poster-viewer"
+              data={`${posterUrl}#view=FitH&toolbar=0`}
+              type="application/pdf"
+              aria-label="Scrollable computational analysis research poster preview"
               tabIndex={activeSlide === 0 ? 0 : -1}
             >
-              <object
-                data={`${posterUrl}#view=FitH&toolbar=0`}
-                type="application/pdf"
-                aria-label="Computational analysis research poster preview"
-              >
-                <span>Download the research poster</span>
-              </object>
-            </a>
+              <a href={posterUrl} download="Jaime-Conde-SURS-Research-Poster.pdf">
+                Download the research poster
+              </a>
+            </object>
           </article>
 
           <figure
@@ -100,9 +103,17 @@ export default function ResearchCarousel() {
               : "Presenting at the Summer Undergraduate Research Symposium"}
           </strong>
           <small>
-            {activeSlide === 0
-              ? "Click the poster to download"
-              : "Summer Undergraduate Research Symposium · 2026"}
+            {activeSlide === 0 ? (
+              <a
+                className="poster-download-link"
+                href={posterUrl}
+                download="Jaime-Conde-SURS-Research-Poster.pdf"
+              >
+                Click here to download the poster
+              </a>
+            ) : (
+              "Summer Undergraduate Research Symposium · 2026"
+            )}
           </small>
         </div>
 
