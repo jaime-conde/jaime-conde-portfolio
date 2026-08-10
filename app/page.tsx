@@ -198,16 +198,48 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="project-media" aria-label={`${project.mediaLabel} placeholder`}>
-            <div className="media-corners" aria-hidden="true" />
-            <span className="media-index">IMG / 0{index + 1}</span>
-            <div className="media-prompt">
-              <span className="media-plus" aria-hidden="true">+</span>
-              <strong>{project.mediaLabel}</strong>
-              <small>{project.mediaHint}</small>
+          {project.id === "research" ? (
+            <div className="research-gallery" aria-label="Dr. Dutta research and SURS presentation gallery">
+              <a
+                className="research-media poster-preview"
+                href="/jaime-conde-portfolio/images/Computational%20analysis%20of%20metal%20effects%20on%20ethylene%20insertion%20in%20Group%204%20metallocene%20analogs.pdf"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <object
+                  data="/jaime-conde-portfolio/images/Computational%20analysis%20of%20metal%20effects%20on%20ethylene%20insertion%20in%20Group%204%20metallocene%20analogs.pdf#view=FitH&toolbar=0"
+                  type="application/pdf"
+                  aria-label="Computational analysis research poster"
+                >
+                  <span>Open the full research poster</span>
+                </object>
+                <span className="gallery-label">01 / RESEARCH POSTER</span>
+                <strong>Computational Analysis of Group 4 Metallococene Analogs</strong>
+                <small>Open full poster ↗</small>
+              </a>
+              <figure className="research-media presentation-photo">
+                <img
+                  src="/jaime-conde-portfolio/images/SURS%20Poster%20image.png"
+                  alt="Jaime Conde presenting computational chemistry research at the 2026 Summer Undergraduate Research Symposium"
+                />
+                <figcaption>
+                  <span className="gallery-label">02 / SURS 2026</span>
+                  <strong>Presenting the research at the Summer Undergraduate Research Symposium</strong>
+                </figcaption>
+              </figure>
             </div>
-            <span className="media-format">16:9 · JPG / PNG / WEBP</span>
-          </div>
+          ) : (
+            <div className="project-media" aria-label={`${project.mediaLabel} placeholder`}>
+              <div className="media-corners" aria-hidden="true" />
+              <span className="media-index">IMG / 0{index + 1}</span>
+              <div className="media-prompt">
+                <span className="media-plus" aria-hidden="true">+</span>
+                <strong>{project.mediaLabel}</strong>
+                <small>{project.mediaHint}</small>
+              </div>
+              <span className="media-format">16:9 · JPG / PNG / WEBP</span>
+            </div>
+          )}
         </section>
       ))}
 
