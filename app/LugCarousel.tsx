@@ -14,8 +14,8 @@ export default function LugCarousel() {
         <div className="lug-results">
           <div><strong>203.82 g</strong><span>Baseline mass</span></div>
           <div><strong>160.81 g</strong><span>Optimized mass</span></div>
-          <div><strong>43.0058 g</strong><span>Mass removed</span></div>
-          <div><strong>21.1%</strong><span>Mass reduction</span></div>
+          <div><strong>43.01 g</strong><span>Mass removed</span></div>
+          <div><strong>21.10%</strong><span>Mass reduction</span></div>
           <div className="lug-result-wide" style={{ gridColumn: "1 / -1" }}>
             <strong>6061-T6</strong><span>Aluminum material model</span>
           </div>
@@ -23,7 +23,7 @@ export default function LugCarousel() {
         <p>
           Stress-driven progression from the baseline solid lug to a variable-density lattice geometry,
           evaluated using 6061-T6 aluminum material properties. Baseline and optimized masses are inferred
-          from the recorded 43.0058 g reduction and rounded 21.1% mass reduction.
+          from the recorded 43.01 g reduction and 21.10% mass reduction.
         </p>
       </figcaption>
     </figure>
