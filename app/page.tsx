@@ -2,6 +2,7 @@ import StructuralTelemetry from "./StructuralTelemetry";
 import ResearchCarousel from "./ResearchCarousel";
 import LugCarousel from "./LugCarousel";
 import AeroponicsGallery from "./AeroponicsGallery";
+import RocketGallery from "./RocketGallery";
 
 const projects = [
   {
@@ -207,6 +208,8 @@ export default function Home() {
             <LugCarousel />
           ) : project.id === "aeroponics" ? (
             <AeroponicsGallery />
+          ) : project.id === "rocket" ? (
+            <RocketGallery />
           ) : (
             <div className="project-media" aria-label={`${project.mediaLabel} placeholder`}>
               <div className="media-corners" aria-hidden="true" />
