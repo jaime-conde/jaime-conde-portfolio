@@ -1,7 +1,5 @@
 import StructuralTelemetry from "./StructuralTelemetry";
 
-const assetPrefix = process.env.GITHUB_ACTIONS === "true" ? "/jaime-conde-portfolio" : "";
-
 const projects = [
   {
     stage: "Stage 01 · Computational Research",
@@ -144,7 +142,7 @@ export default function Home() {
           <div className="stress-contour" aria-hidden="true" />
           <div className="portrait">
             <img
-              src={`${assetPrefix}/images/jaime-conde-headshot.png`}
+              src="./images/jaime-conde-headshot.png"
               alt="Jaime Conde"
             />
           </div>
