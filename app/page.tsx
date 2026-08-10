@@ -2,89 +2,111 @@ import StructuralTelemetry from "./StructuralTelemetry";
 
 const projects = [
   {
+    id: "research",
     stage: "Stage 01 · Computational Research",
-    title: "Modeling the chemistry behind better materials",
+    title: "Modeling the chemistry behind polymer materials",
     description:
-      "Computational chemistry research with Dr. Dutta using Spartan to study Group 4 metallocene catalysts for ethylene polymerization. I compare transition-state geometry, metal–carbon bond distances, electrostatic potential, and vibrational spectra to understand how catalyst structure shapes reactivity.",
+      "Computational research with Dr. Dutta using Spartan, PM3, and density functional theory to study ethylene-polymerization catalysts. I analyze transition-state geometry, electrostatic potential, stereochemistry, and infrared spectra to connect catalyst behavior with polymer formation and properties.",
     metrics: [
-      ["3", "transition metals compared"],
-      ["DFT", "electronic structure method"],
-      ["SURS", "2026 research presentation"],
+      ["PM3 + DFT", "modeling methods"],
+      ["Group 4", "catalyst chemistry"],
+      ["SURS", "2026 presentation"],
     ],
-    tags: ["Spartan", "Density functional theory", "Data analysis", "Scientific communication"],
+    tags: ["Spartan", "Computational chemistry", "Data analysis", "Scientific communication"],
     mediaLabel: "Add research image",
     mediaHint: "Molecular model · results plot · SURS poster",
   },
   {
-    stage: "Stage 02 · Generative Design",
-    title: "Lightweighting a structural lug with field-driven design",
+    id: "design",
+    stage: "Stage 02 · Structural Design",
+    title: "Lightweighting a lug with stress-driven lattice density",
     description:
-      "An independent nTop project exploring a variable-density octet lattice inside a load-bearing lug. The lattice responds to the stress field so material is concentrated where the part needs it and removed where it does not—connecting simulation, manufacturability, and physical testing.",
+      "An independent data-driven CAD project exploring a variable-density lattice inside a load-bearing lug. I evaluated pin loading, bearing stresses, and stress concentrations, then prepared the design for additive manufacturing and developed a physical comparison test against a fully solid component.",
     metrics: [
-      ["Octet", "lattice architecture"],
-      ["FEA", "stress-guided density"],
-      ["PLA", "prototype material"],
+      ["nTop", "field-driven design"],
+      ["FEA", "structural evaluation"],
+      ["A/B", "lattice vs. solid test"],
     ],
-    tags: ["nTop", "FEA", "Additive manufacturing", "Design optimization"],
+    tags: ["nTopology", "Basic FEA", "Additive manufacturing", "Parametric modeling"],
     mediaLabel: "Add project image",
     mediaHint: "FEA contour · lattice model · printed prototype",
   },
   {
-    stage: "Stage 03 · Engineering Outreach",
-    title: "Helping younger students find their direction",
+    id: "aeroponics",
+    stage: "Stage 03 · Sustainable Systems",
+    title: "Designing a modular, replicable aeroponic system",
     description:
-      "After attending Georgia Tech’s STEP program in 2024, I returned as a mentor in 2026. I supported students as they built rovers, debugged circuits, and translated unfamiliar engineering ideas into working hardware. I am continuing that mission through GOT Space K–12 outreach.",
+      "Designed modular food-grade PETG components and supported construction, documentation, and replication planning within a $500 project budget. The system applies low-cost aeroponic methods to a sustainability-focused effort addressing food insecurity.",
     metrics: [
-      ["2 wks", "STEP day camp mentored"],
-      ["K–12", "students reached"],
-      ["1→1", "participant to mentor"],
+      ["$500", "project budget"],
+      ["PETG", "food-grade components"],
+      ["Modular", "replication strategy"],
     ],
-    tags: ["STEM outreach", "Mentoring", "Circuits", "Rover assembly"],
-    mediaLabel: "Add outreach image",
-    mediaHint: "STEP camp · rover build · GOT Space event",
+    tags: ["CAD design", "3D printing", "Prototyping", "Sustainability"],
+    mediaLabel: "Add system image",
+    mediaHint: "CAD assembly · printed components · completed system",
+  },
+  {
+    id: "rocket",
+    stage: "Stage 04 · Flight Systems",
+    title: "Developing structures for an IREC 10k COTS rocket",
+    description:
+      "Designed nose-cone and transition structures in SolidWorks for a 10k COTS IREC competition rocket. Within a 20-plus-member engineering team, I contributed to mass-distribution analysis, structural integration, and flight-stability validation.",
+    metrics: [
+      ["10k", "competition class"],
+      ["20+", "team members"],
+      ["2", "flight structures designed"],
+    ],
+    tags: ["SolidWorks", "Rocket structures", "Mass distribution", "Flight stability"],
+    mediaLabel: "Add rocket image",
+    mediaHint: "SolidWorks model · assembled rocket · team test",
   },
 ];
 
 const experience = [
   {
-    period: "2026 – Present",
-    role: "Undergraduate Researcher",
-    place: "Georgia State University · Department of Chemistry",
+    period: "2022 – Present",
+    role: "Construction Project Assistant",
+    place: "JCR Contractor LLC · Atlanta, Georgia",
     detail:
-      "Investigating catalyst structures and transition states for ethylene polymerization through computational modeling and comparative molecular analysis.",
+      "Manage project budgets, pay applications, purchases, and expense tracking; coordinate crews of 5–10, schedules, deliveries, and communication between field teams and project managers; and support estimates and financial planning.",
   },
   {
     period: "Summer 2026",
-    role: "STEP Mentor",
-    place: "Georgia Tech · K–12 Aerospace Engineering Outreach",
+    role: "STEP Camp Mentor",
+    place: "Georgia Tech · Atlanta, Georgia",
     detail:
-      "Guided students through rover construction, circuit troubleshooting, and collaborative engineering challenges during a two-week summer program.",
+      "Supported students during rover construction, circuit assembly, troubleshooting, and hands-on engineering activities while maintaining safe workspaces and keeping teams on schedule.",
   },
   {
     period: "2025 – Present",
-    role: "Vice President",
-    place: "Grow Together Organization · GSU Perimeter",
+    role: "Project Lead",
+    place: "Rocket Tech GSU",
     detail:
-      "Managed budgets, meetings, annual funding, member outreach, and hands-on hydroponics assembly and troubleshooting.",
+      "Coordinate documentation, team assignments, and rocket-development activities for a 20-plus-member student engineering organization.",
   },
   {
-    period: "2022 – Present",
-    role: "Operations & Finance Assistant",
-    place: "JCR Contractor LLC",
+    period: "2025",
+    role: "Vice President",
+    place: "Perimeter Motorsports",
     detail:
-      "Automate payroll workflows, audit expenses, organize tax-season records, and plan expenditures around project budgets and tax treatment.",
+      "Supported project planning, member coordination, and mechanical development for the student go-kart program.",
   },
 ];
 
 const skills = [
   "SolidWorks",
   "Autodesk Inventor",
-  "nTop",
+  "AutoCAD",
+  "nTopology",
+  "Basic FEA",
+  "Parametric modeling",
   "Python",
-  "FEA fundamentals",
-  "Spartan",
-  "Technical writing",
-  "Data analysis",
+  "OpenCV",
+  "C / C++",
+  "3D printing",
+  "Mechanical assembly",
+  "Technical documentation",
 ];
 
 export default function Home() {
@@ -101,9 +123,10 @@ export default function Home() {
         <a href="#launch">01</a>
         <a href="#research">02</a>
         <a href="#design">03</a>
-        <a href="#outreach">04</a>
-        <a href="#experience">05</a>
-        <a href="#contact">06</a>
+        <a href="#aeroponics">04</a>
+        <a href="#rocket">05</a>
+        <a href="#experience">06</a>
+        <a href="#contact">07</a>
       </nav>
 
       <section className="hero shell" id="launch">
@@ -114,17 +137,18 @@ export default function Home() {
             Engineering for <em>flight.</em>
           </h1>
           <p className="lede">
-            Engineering student exploring how lighter structures, computational research,
-            and better design decisions can move aerospace systems forward.
+            Aerospace engineering student using computational research, structural design,
+            and hands-on prototyping to turn technical questions into testable systems.
           </p>
           <p className="intro">
-            I work at the intersection of modeling and making—from studying molecular
-            catalysts and stress-driven lattices to mentoring students as they turn circuits
-            and code into working rovers. I am preparing to transfer into aerospace engineering
-            and pursue research in aerostructures and advanced manufacturing.
+            My work spans molecular catalyst modeling, stress-driven lightweighting,
+            sustainable systems, and student rocket structures. I am preparing to transfer
+            in Spring 2027 and pursue aerospace research in aerostructures and advanced
+            manufacturing.
           </p>
           <div className="status-row">
             <span>3.7 GPA</span><span>2026 SURS Presenter</span><span>STEP Mentor</span>
+            <span>REP</span><span>HOPE Scholar</span>
           </div>
           <div className="hero-actions">
             <a className="button primary" href="#research">Explore projects</a>
@@ -155,11 +179,7 @@ export default function Home() {
       </div>
 
       {projects.map((project, index) => (
-        <section
-          className="project shell"
-          id={index === 0 ? "research" : index === 1 ? "design" : "outreach"}
-          key={project.title}
-        >
+        <section className="project shell" id={project.id} key={project.title}>
           <div className="stage-label"><b>▮</b> {project.stage}</div>
           <div className="project-grid">
             <div>
@@ -192,10 +212,10 @@ export default function Home() {
       ))}
 
       <section className="experience shell" id="experience">
-        <div className="stage-label"><b>▮</b> Development · Experience Log</div>
+        <div className="stage-label"><b>▮</b> Development · Experience & Leadership</div>
         <div className="section-heading">
-          <p>05 / EXPERIENCE</p>
-          <h2>Learning in the lab,<br />the shop, and the field.</h2>
+          <p>06 / EXPERIENCE</p>
+          <h2>Leading in the shop,<br />the field, and the classroom.</h2>
         </div>
         <div className="timeline">
           {experience.map((item) => (
@@ -217,7 +237,7 @@ export default function Home() {
           <h2>Tools for turning questions into testable designs.</h2>
         </div>
         <div className="skill-grid">
-          {skills.map((skill, index) => <span key={skill}><b>0{index + 1}</b>{skill}</span>)}
+          {skills.map((skill, index) => <span key={skill}><b>{String(index + 1).padStart(2, "0")}</b>{skill}</span>)}
         </div>
       </section>
 
@@ -228,8 +248,12 @@ export default function Home() {
           Open to undergraduate research, aerospace design projects, and engineering
           opportunities in the Atlanta area.
         </p>
+        <div className="hero-actions" style={{ justifyContent: "center" }}>
+          <a className="button primary" href="mailto:jaime.conde.acos@gmail.com">Email me</a>
+          <a className="button" href="https://www.linkedin.com/in/jaime-conde1/" target="_blank" rel="noreferrer">LinkedIn</a>
+        </div>
         <div className="contact-meta">
-          <span>Jaime Conde</span><span>Lawrenceville, Georgia</span><span>English · Español</span>
+          <span>Jaime Conde</span><span>Atlanta, Georgia</span><span>English · Español</span>
         </div>
       </section>
 
