@@ -16,7 +16,9 @@ export default function LugCarousel() {
           <div><strong>160.81 g</strong><span>Optimized mass</span></div>
           <div><strong>43.0058 g</strong><span>Mass removed</span></div>
           <div><strong>21.1%</strong><span>Mass reduction</span></div>
-          <div className="lug-result-wide"><strong>6061-T6</strong><span>Aluminum material model</span></div>
+          <div className="lug-result-wide" style={{ gridColumn: "1 / -1" }}>
+            <strong>6061-T6</strong><span>Aluminum material model</span>
+          </div>
         </div>
         <p>
           Stress-driven progression from the baseline solid lug to a variable-density lattice geometry,
