@@ -142,7 +142,7 @@ export default function Home() {
           <div className="stress-contour" aria-hidden="true" />
           <div className="portrait">
             <img
-              src="./images/jaime-conde-headshot.png"
+              src="/jaime-conde-portfolio/images/jaime-conde-headshot.png"
               alt="Jaime Conde"
             />
           </div>
