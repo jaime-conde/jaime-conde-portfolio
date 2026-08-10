@@ -277,7 +277,8 @@ a { color: inherit; text-decoration: none; }
 }
 .carousel-viewport {
   position: relative;
-  aspect-ratio: 16 / 10;
+  width: 100%;
+  height: clamp(620px, 72vw, 820px);
   overflow: hidden;
   background: #050c18;
 }
@@ -432,7 +433,7 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
   .project-grid { margin-top: 40px; }
   .project-media { margin-top: 38px; aspect-ratio: 4 / 3; }
   .research-carousel { margin-top: 38px; }
-  .carousel-viewport { aspect-ratio: 4 / 3; }
+  .carousel-viewport { height: clamp(430px, 112vw, 620px); }
   .carousel-arrow { width: 40px; height: 50px; }
   .carousel-prev { left: 8px; }
   .carousel-next { right: 8px; }
