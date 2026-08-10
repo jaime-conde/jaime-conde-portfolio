@@ -1,7 +1,20 @@
 import type { NextConfig } from "next";
 
+const repositoryName = "jaime-conde-portfolio";
+const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export",
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  ...(isGitHubPages
+    ? {
+        basePath: `/${repositoryName}`,
+        assetPrefix: `/${repositoryName}/`,
+      }
+    : {}),
 };
 
 export default nextConfig;
