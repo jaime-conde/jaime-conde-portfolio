@@ -2,7 +2,7 @@
 
 Personal portfolio focused on aerostructures, structural analysis, FEA/CFD, engineering research, design projects, and STEM outreach.
 
-[View the live portfolio](https://jaime-conde-portfolio.juni041315.chatgpt.site)
+[View the portfolio on GitHub Pages](https://jaime-conde.github.io/jaime-conde-portfolio/)
 
 ## Run locally
 
@@ -13,4 +13,6 @@ npm install
 npm run dev
 ```
 
-The public copy uses a placeholder hosting manifest. The private deployment identity, generated files, credentials, and connection metadata are intentionally excluded.
+## Deployment
+
+The site is exported as static HTML and deployed automatically through GitHub Actions whenever `main` changes. The public repository excludes private ChatGPT Sites metadata, credentials, dependencies, and generated build files.
