@@ -4,54 +4,86 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 type Telemetry = {
+  elapsed: number;
+  section: number;
   load: number;
   stress: number;
   status: "NOMINAL" | "CAUTION" | "CRITICAL";
 };
 
 const initialTelemetry: Telemetry = {
+  elapsed: 0,
+  section: 1,
   load: 0,
   stress: 0,
   status: "NOMINAL",
 };
 
+const sectionIds = [
+  "launch",
+  "research",
+  "design",
+  "aeroponics",
+  "rocket",
+  "turbojet",
+  "experience",
+  "toolkit",
+  "contact",
+];
+
+const formatElapsed = (seconds: number) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  return [hours, minutes, remainingSeconds]
+    .map((value) => value.toString().padStart(2, "0"))
+    .join(":");
+};
+
 export default function StructuralTelemetry() {
   const [telemetry, setTelemetry] = useState<Telemetry>(initialTelemetry);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    let frame = 0;
+    const start = performance.now();
 
     const update = () => {
-      frame = 0;
-      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = scrollable > 0
-        ? Math.min(1, Math.max(0, window.scrollY / scrollable))
-        : 0;
-      const load = progress * 12;
-      const stress = 248 * Math.pow(progress, 1.15);
-      const status = stress >= 210
+      const now = performance.now();
+      const elapsed = (now - start) / 1000;
+      const probe = window.scrollY + window.innerHeight * 0.42;
+      let section = 1;
+
+      sectionIds.forEach((id, index) => {
+        const element = document.getElementById(id);
+        if (element && element.offsetTop <= probe) section = index + 1;
+      });
+
+      const status = section >= 7
         ? "CRITICAL"
-        : stress >= 155
+        : section >= 5
           ? "CAUTION"
           : "NOMINAL";
 
-      setTelemetry({ load, stress, status });
-    };
+      // Simulated cyclic axial load. Stress is calculated as sigma = Kt(F/A),
+      // using a 68 mm^2 effective section and a 1.32 stress concentration factor.
+      const baseLoad = section <= 4
+        ? 2.4 + (section - 1) * 1.3
+        : section <= 6
+          ? 7.8 + (section - 5) * 1.15
+          : 10.15 + (section - 7) * 0.62;
+      const cyclicLoad = 0.28 * Math.sin(elapsed * 1.15)
+        + 0.09 * Math.sin(elapsed * 2.7 + section);
+      const load = Math.max(0, baseLoad + cyclicLoad);
+      const stress = 1.32 * ((load * 1000) / 68);
 
-    const requestUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(update);
+      setTelemetry({ elapsed, section, load, stress, status });
     };
 
     update();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
+    const interval = window.setInterval(update, 100);
 
     return () => {
-      window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
-      if (frame) window.cancelAnimationFrame(frame);
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -59,13 +91,14 @@ export default function StructuralTelemetry() {
     <>
       <div
         className={`telemetry telemetry-${telemetry.status.toLowerCase()}`}
-        aria-label={`Structural telemetry: applied load ${telemetry.load.toFixed(2)} kilonewtons, von Mises stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
+        aria-label={`Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Structural telemetry: applied load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
       >
+        <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
         <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
-        <span><b>&sigma;VM</b> {telemetry.stress.toFixed(1)} MPA</span>
+        <span><b>&sigma;</b> {telemetry.stress.toFixed(1)} MPA</span>
         <span><b>STATE</b> {telemetry.status}</span>
       </div>
-      {mounted && createPortal(
+      {typeof document !== "undefined" && createPortal(
         <div
           className={`structural-vignette vignette-${telemetry.status.toLowerCase()}`}
           aria-hidden="true"
