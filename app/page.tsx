@@ -115,20 +115,31 @@ const experience = [
   },
 ];
 
-const skills = [
-  "SolidWorks",
-  "Autodesk Inventor",
-  "AutoCAD",
-  "nTopology",
-  "Basic FEA",
-  "Parametric modeling",
-  "Python",
-  "OpenCV",
-  "C / C++",
-  "Microsoft Excel",
-  "3D printing",
-  "Mechanical assembly",
-  "Technical documentation",
+const skillGroups = [
+  {
+    index: "01",
+    title: "CAD & Parametric Design",
+    description: "Building parts, assemblies, and field-driven geometry for structures and flight hardware.",
+    tools: ["SolidWorks", "Autodesk Inventor", "AutoCAD", "nTopology", "Parametric modeling"],
+  },
+  {
+    index: "02",
+    title: "Analysis & Computing",
+    description: "Using simulation and code to evaluate designs, process data, and automate technical work.",
+    tools: ["Basic FEA", "Python", "OpenCV", "C / C++", "Data analysis"],
+  },
+  {
+    index: "03",
+    title: "Research & Operations",
+    description: "Turning experimental, financial, and project information into traceable decisions.",
+    tools: ["Spartan", "Microsoft Excel", "Computational modeling", "Technical documentation"],
+  },
+  {
+    index: "04",
+    title: "Prototyping & Build",
+    description: "Taking concepts into physical form through fabrication, assembly, and troubleshooting.",
+    tools: ["3D printing", "Mechanical assembly", "Circuit troubleshooting", "Design validation"],
+  },
 ];
 
 export default function Home() {
@@ -310,8 +321,23 @@ export default function Home() {
           <p>METHODS / TOOLKIT</p>
           <h2>Tools for turning questions into testable designs.</h2>
         </div>
-        <div className="skill-grid">
-          {skills.map((skill, index) => <span key={skill}><b>{String(index + 1).padStart(2, "0")}</b>{skill}</span>)}
+        <p className="toolkit-intro">
+          My toolkit spans the full development loop—from modeling and analysis to
+          documentation, fabrication, and hands-on validation.
+        </p>
+        <div className="toolkit-grid">
+          {skillGroups.map((group) => (
+            <article className="toolkit-card" key={group.title}>
+              <div className="toolkit-card-heading">
+                <span>{group.index}</span>
+                <h3>{group.title}</h3>
+              </div>
+              <p>{group.description}</p>
+              <ul>
+                {group.tools.map((tool) => <li key={tool}>{tool}</li>)}
+              </ul>
+            </article>
+          ))}
         </div>
       </section>
 
