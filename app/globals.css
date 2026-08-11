@@ -728,9 +728,21 @@ a { color: inherit; text-decoration: none; }
 .experience-domains span:nth-child(2n) { border-right: 0; }
 .experience-domains span:nth-last-child(-n + 2) { border-bottom: 0; }
 .experience-domains b { color: var(--cyan); font: 9px var(--font-geist-mono), monospace; }
-.experience-note { margin-top: 24px; padding-top: 19px; border-top: 1px solid var(--line); }
-.experience-note span { color: var(--cyan); font: 600 9px var(--font-geist-mono), monospace; letter-spacing: .14em; }
-.experience-note p { margin: 9px 0 0; color: #c2ceda; font-size: 13px; line-height: 1.55; }
+.excel-sample { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 22px; }
+.excel-sample-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.excel-sample-heading span { color: var(--cyan); font: 600 9px var(--font-geist-mono), monospace; letter-spacing: .14em; }
+.excel-sample-heading b { padding: 4px 7px; border: 1px solid rgba(81, 220, 255, .25); color: #9cb0c4; font: 8px var(--font-geist-mono), monospace; letter-spacing: .12em; }
+.excel-preview { margin-top: 14px; aspect-ratio: 16 / 8.6; overflow: hidden; border: 1px solid rgba(81, 220, 255, .18); background: #e8edf2; }
+.excel-preview img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; transition: transform .35s ease; }
+.excel-sample:hover .excel-preview img { transform: scale(1.015); }
+.excel-sample-copy h3 { margin: 18px 0 8px; color: #d4e0eb; font-size: 17px; line-height: 1.35; }
+.excel-sample-copy p { margin: 0; color: #8698ab; font-size: 12px; line-height: 1.65; }
+.excel-sample-copy ul { margin: 15px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.excel-sample-copy li { position: relative; padding-left: 15px; color: #aebdcb; font-size: 11px; line-height: 1.45; }
+.excel-sample-copy li::before { content: "+"; position: absolute; left: 0; color: var(--amber); font-family: var(--font-geist-mono), monospace; }
+.excel-download { margin-top: 18px; padding: 12px 0 2px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--cyan); font: 600 10px var(--font-geist-mono), monospace; letter-spacing: .08em; text-transform: uppercase; }
+.excel-download b { font-size: 18px; transition: transform .2s ease; }
+.excel-download:hover b { transform: translateY(3px); }
 .timeline article { display: grid; grid-template-columns: 145px 1fr; gap: 30px; padding: 32px 0; border-top: 1px solid var(--line); }
 .timeline time { color: #72869d; font: 10px/1.5 var(--font-geist-mono), monospace; letter-spacing: .08em; }
 .timeline h3 { margin: 0 0 5px; font-size: 21px; }

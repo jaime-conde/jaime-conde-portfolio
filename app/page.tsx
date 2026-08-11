@@ -265,10 +265,34 @@ export default function Home() {
               <span><b>03</b> Outreach</span>
               <span><b>04</b> Engineering</span>
             </div>
-            <div className="experience-note">
-              <span>APPLIED TOOL</span>
-              <p>Excel calculators for budgeting and payroll workflows</p>
-            </div>
+            <article className="excel-sample">
+              <div className="excel-sample-heading">
+                <span>FEATURED WORK SAMPLE</span>
+                <b>XLSX</b>
+              </div>
+              <div className="excel-preview">
+                <img
+                  src="/jaime-conde-portfolio/images/cash-allocation-dashboard.png"
+                  alt="Sanitized Excel cash-allocation dashboard with allocation table and chart"
+                />
+              </div>
+              <div className="excel-sample-copy">
+                <h3>Cash-Flow & Payroll Allocation Calculator</h3>
+                <p>
+                  A sanitized Excel model built to turn recorded income into budget,
+                  payroll, tax-reserve, and annual projection decisions.
+                </p>
+                <ul>
+                  <li>Linked assumptions and allocation formulas</li>
+                  <li>Reserve safeguards and annual projections</li>
+                  <li>Seasonal income tracking and charts</li>
+                </ul>
+              </div>
+              <a className="excel-download" href="/jaime-conde-portfolio/downloads/Cash-Allocation-Portfolio-Sample.xlsx" download>
+                <span>Download sanitized workbook</span>
+                <b aria-hidden="true">↓</b>
+              </a>
+            </article>
           </aside>
           <div className="timeline">
             {experience.map((item) => (
