@@ -9,7 +9,7 @@ import ExcelCarousel from "./ExcelCarousel";
 const projects = [
   {
     id: "research",
-    stage: "Stage 01 · Computational Research",
+    stage: "Section 02 · Computational Research",
     title: "Modeling the chemistry behind polymer materials",
     description:
       "Computational research with Dr. Dutta using Spartan, PM3, and density functional theory to study ethylene-polymerization catalysts. I analyze transition-state geometry, electrostatic potential, stereochemistry, and infrared spectra to connect catalyst behavior with polymer formation and properties.",
@@ -24,7 +24,7 @@ const projects = [
   },
   {
     id: "design",
-    stage: "Stage 02 · Structural Design",
+    stage: "Section 03 · Structural Design",
     title: "Lightweighting a lug with stress-driven lattice density",
     description:
       "An independent data-driven CAD project exploring a variable-density lattice inside a load-bearing lug. I evaluated pin loading, bearing stresses, and stress concentrations, then prepared the design for additive manufacturing and developed a physical comparison test against a fully solid component.",
@@ -39,7 +39,7 @@ const projects = [
   },
   {
     id: "aeroponics",
-    stage: "Stage 03 · Sustainable Systems",
+    stage: "Section 04 · Sustainable Systems",
     title: "Designing a modular, replicable aeroponic system",
     description:
       "Designed modular food-grade PETG components and supported construction, documentation, purchasing, and replication planning for a low-cost aeroponic tower. The team organized the build around a six-week schedule, documented risks and responsibilities, and tested automation while developing a sustainability-focused system intended to address food insecurity.",
@@ -54,7 +54,7 @@ const projects = [
   },
   {
     id: "rocket",
-    stage: "Stage 04 · Flight Systems",
+    stage: "Section 05 · Flight Systems",
     title: "Designing the nose cone for an IREC 10k COTS rocket",
     description:
       "Designed the rocket nose cone in Autodesk Inventor and served as design lead for a six-person team within Rocket Tech GSU's 20-plus-member club. I coordinated design work and supported the nose cone's integration with the rocket assembly for the IREC 10k COTS competition.",
@@ -69,7 +69,7 @@ const projects = [
   },
   {
     id: "turbojet",
-    stage: "Stage 05 · Propulsion Development",
+    stage: "Section 06 · Propulsion Development",
     title: "Annular-combustor turbojet with lobed ejector augmentation",
     description:
       "An independent, in-progress turbojet project combining an annular combustion system with a lobed ejector concept for the exhaust and afterburner section. I am developing the flower-shaped ejector geometry to improve exhaust mixing and entrain additional ambient air while working through airflow, fuel delivery, flame stabilization, cooling, and dilution-zone decisions before fabrication and safe testing.",
@@ -160,12 +160,13 @@ export default function Home() {
         <a href="#rocket">05</a>
         <a href="#turbojet">06</a>
         <a href="#experience">07</a>
-        <a href="#contact">08</a>
+        <a href="#toolkit">08</a>
+        <a href="#contact">09</a>
       </nav>
 
       <section className="hero shell" id="launch">
         <div className="hero-copy">
-          <p className="eyebrow">Georgia State University · Engineering Pathway · Aerospace</p>
+          <p className="eyebrow">01 / Georgia State University · Engineering Pathway · Aerospace</p>
           <h1>
             Jaime Conde.<br />
             Engineering for <em>flight.</em>
@@ -187,6 +188,13 @@ export default function Home() {
           <div className="hero-actions">
             <a className="button primary" href="#research">Explore projects</a>
             <a className="button" href="#experience">View experience</a>
+            <a
+              className="button"
+              href="/jaime-conde-portfolio/downloads/Jaime-Conde-Resume.pdf"
+              download
+            >
+              Download résumé ↓
+            </a>
           </div>
         </div>
 
@@ -217,7 +225,7 @@ export default function Home() {
           <div className="stage-label"><b>▮</b> {project.stage}</div>
           <div className="project-grid">
             <div>
-              <p className="project-number">0{index + 1}</p>
+              <p className="project-number">0{index + 2}</p>
               <h2>{project.title}</h2>
             </div>
             <div className="project-body">
@@ -316,10 +324,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="payload shell">
+      <section className="payload shell" id="toolkit">
         <div className="section-heading toolkit-heading">
           <div className="toolkit-heading-copy">
-            <p>METHODS / TOOLKIT</p>
+            <p>08 / METHODS / TOOLKIT</p>
             <p className="toolkit-intro">
               My toolkit spans the full development loop—from modeling and analysis to
               documentation, fabrication, and hands-on validation.
@@ -344,7 +352,7 @@ export default function Home() {
       </section>
 
       <section className="contact shell" id="contact">
-        <p className="eyebrow">Next iteration · New collaboration</p>
+        <p className="eyebrow">09 / CONTACT · Next iteration · New collaboration</p>
         <h2>Let’s build something that earns its way onto the aircraft.</h2>
         <p>
           Open to undergraduate research, aerospace design projects, and engineering
