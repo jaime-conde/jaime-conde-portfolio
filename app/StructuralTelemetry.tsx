@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 type Telemetry = {
   elapsed: number;
   section: number;
+  velocity: number;
   load: number;
   stress: number;
   status: "NOMINAL" | "CAUTION" | "CRITICAL";
@@ -14,6 +15,7 @@ type Telemetry = {
 const initialTelemetry: Telemetry = {
   elapsed: 0,
   section: 1,
+  velocity: 0,
   load: 0,
   stress: 0,
   status: "NOMINAL",
@@ -46,10 +48,32 @@ export default function StructuralTelemetry() {
 
   useEffect(() => {
     const start = performance.now();
+    let previousTime = start;
+    let previousScrollY = window.scrollY;
+    let velocity = 0;
+    let previousVelocity = 0;
+    let acceleration = 0;
+    let lastRender = 0;
+    let frame = 0;
 
-    const update = () => {
-      const now = performance.now();
+    const update = (now: number) => {
       const elapsed = (now - start) / 1000;
+      const deltaTime = Math.max((now - previousTime) / 1000, 0.001);
+      const deltaScroll = window.scrollY - previousScrollY;
+
+      // Treat page movement as a virtual instrumented carriage. Scroll position
+      // is converted to metres, then differentiated and smoothed so the values
+      // react to the visitor without amplifying single-frame browser noise.
+      const measuredVelocity = Math.max(-6, Math.min(6, (deltaScroll * 0.0015) / deltaTime));
+      const velocityBlend = deltaScroll === 0 ? 0.08 : 0.24;
+      velocity += (measuredVelocity - velocity) * velocityBlend;
+      const measuredAcceleration = (velocity - previousVelocity) / deltaTime;
+      acceleration += (Math.max(-30, Math.min(30, measuredAcceleration)) - acceleration) * 0.16;
+
+      previousTime = now;
+      previousScrollY = window.scrollY;
+      previousVelocity = velocity;
+
       const probe = window.scrollY + window.innerHeight * 0.42;
       let section = 1;
 
@@ -64,26 +88,28 @@ export default function StructuralTelemetry() {
           ? "CAUTION"
           : "NOMINAL";
 
-      // Simulated cyclic axial load. Stress is calculated as sigma = Kt(F/A),
-      // using a 68 mm^2 effective section and a 1.32 stress concentration factor.
-      const baseLoad = section <= 4
-        ? 2.4 + (section - 1) * 1.3
-        : section <= 6
-          ? 7.8 + (section - 5) * 1.15
-          : 10.15 + (section - 7) * 0.62;
-      const cyclicLoad = 0.28 * Math.sin(elapsed * 1.15)
-        + 0.09 * Math.sin(elapsed * 2.7 + section);
-      const load = Math.max(0, baseLoad + cyclicLoad);
+      // Scroll acceleration drives inertial load through F = ma. A section-based
+      // preload keeps the virtual specimen engaged while it is stationary.
+      // Stress then follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
+      const preload = section <= 4 ? 2.2 : section <= 6 ? 5.4 : 8.1;
+      const effectiveMass = 260;
+      const inertialLoad = (effectiveMass * Math.abs(acceleration)) / 1000;
+      const dragLoad = 0.32 * Math.abs(velocity);
+      const load = preload + inertialLoad + dragLoad;
       const stress = 1.32 * ((load * 1000) / 68);
 
-      setTelemetry({ elapsed, section, load, stress, status });
+      if (now - lastRender >= 80) {
+        lastRender = now;
+        setTelemetry({ elapsed, section, velocity, load, stress, status });
+      }
+
+      frame = window.requestAnimationFrame(update);
     };
 
-    update();
-    const interval = window.setInterval(update, 100);
+    frame = window.requestAnimationFrame(update);
 
     return () => {
-      window.clearInterval(interval);
+      window.cancelAnimationFrame(frame);
     };
   }, []);
 
@@ -91,9 +117,10 @@ export default function StructuralTelemetry() {
     <>
       <div
         className={`telemetry telemetry-${telemetry.status.toLowerCase()}`}
-        aria-label={`Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Structural telemetry: applied load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
+        aria-label={`Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
       >
         <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
+        <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
         <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
         <span><b>&sigma;</b> {telemetry.stress.toFixed(1)} MPA</span>
         <span><b>STATE</b> {telemetry.status}</span>
