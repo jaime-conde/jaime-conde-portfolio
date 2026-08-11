@@ -698,7 +698,7 @@ a { color: inherit; text-decoration: none; }
 .experience-profile {
   position: sticky;
   top: 84px;
-  margin-top: -132px;
+  margin-top: -164px;
   padding: 28px;
   border: 1px solid var(--line);
   background:
