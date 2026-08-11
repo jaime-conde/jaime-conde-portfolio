@@ -762,9 +762,17 @@ a { color: inherit; text-decoration: none; }
 .timeline .place { color: var(--cyan); font-size: 12px; font-family: var(--font-geist-mono), monospace; }
 .timeline p:last-child { color: #8698ab; line-height: 1.7; font-size: 14px; }
 
+.toolkit-heading { margin-bottom: 42px; }
+.toolkit-heading-copy > p:first-child {
+  margin: 8px 0 0;
+  color: var(--amber);
+  font: 500 11px/1.5 var(--font-geist-mono), monospace;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
 .toolkit-intro {
-  width: min(650px, 100%);
-  margin: -28px 0 36px calc(40% + 32px);
+  max-width: 360px;
+  margin: 34px 0 0;
   color: #8fa1b4;
   font-size: 15px;
   line-height: 1.75;
@@ -830,7 +838,8 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
   .project-grid, .section-heading, .experience-grid { grid-template-columns: 1fr; gap: 28px; }
   .experience-profile { margin-top: 0; }
   .experience-profile { position: relative; top: auto; }
-  .toolkit-intro { width: 100%; margin: -10px 0 32px; }
+  .toolkit-heading-copy > p:first-child { margin-top: 0; }
+  .toolkit-intro { max-width: 650px; margin: 22px 0 0; }
   .rocket-gallery-heading { grid-template-columns: 1fr; gap: 16px; }
   .rocket-gallery-grid { grid-template-columns: minmax(210px, .65fr) minmax(0, 1fr); }
   .turbojet-gallery-heading { grid-template-columns: 1fr; gap: 16px; }
