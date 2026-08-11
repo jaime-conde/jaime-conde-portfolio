@@ -1,22 +1,3 @@
-
-.github/
-.gitignore
-.npmrc
-README.md
-app/
-build/
-eslint.config.mjs
-next.config.mjs
-next.config.ts
-package-lock.json
-package.json
-postcss.config.mjs
-public/
-scripts/
-tests/
-tsconfig.json
-vite.config.ts
-worker/
 "use client";
 
 import { useEffect, useState } from "react";
