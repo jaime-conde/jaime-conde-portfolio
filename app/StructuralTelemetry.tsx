@@ -103,13 +103,13 @@ export default function StructuralTelemetry() {
       // faster than the previous 1.8-second response.
       if (stress >= visualStress) {
         visualStress = stress;
-        if (stress > 100) criticalHoldUntil = now + 350;
-      } else if (stress <= 50 && visualStress <= 100) {
+        if (stress >= 120) criticalHoldUntil = now + 350;
+      } else if (stress < 90 && visualStress < 120) {
         // Normal is intentionally immediate; only a critical event is allowed
         // to persist before the screen returns to green.
         visualStress = stress;
       } else {
-        const isCriticalVisual = visualStress > 100;
+        const isCriticalVisual = visualStress >= 120;
         const timeConstant = isCriticalVisual ? 1.35 : 0.55;
         const blend = now < criticalHoldUntil && isCriticalVisual
           ? 0
@@ -119,15 +119,15 @@ export default function StructuralTelemetry() {
       if (visualStress < 0.1 && stress < 0.1) visualStress = 0;
 
       // Hysteresis prevents the state from flickering when stress sits close
-      // to a threshold. Entry remains 50/100 MPa; exit requires a clear drop.
+      // to a threshold. Entry is 90/120 MPa; exit requires a clear drop.
       if (displayedStatus === "CRITICAL") {
-        if (visualStress < 92) displayedStatus = visualStress > 50 ? "CAUTION" : "NOMINAL";
+        if (visualStress < 112) displayedStatus = visualStress >= 90 ? "CAUTION" : "NOMINAL";
       } else if (displayedStatus === "CAUTION") {
-        if (visualStress > 100) displayedStatus = "CRITICAL";
-        else if (visualStress < 44) displayedStatus = "NOMINAL";
-      } else if (visualStress > 100) {
+        if (visualStress >= 120) displayedStatus = "CRITICAL";
+        else if (visualStress < 82) displayedStatus = "NOMINAL";
+      } else if (visualStress >= 120) {
         displayedStatus = "CRITICAL";
-      } else if (visualStress > 50) {
+      } else if (visualStress >= 90) {
         displayedStatus = "CAUTION";
       }
 
@@ -157,11 +157,11 @@ export default function StructuralTelemetry() {
     };
   }, []);
 
-  const baseVignetteStrength = telemetry.visualStress > 100
-    ? Math.min(0.50, 0.38 + (telemetry.visualStress - 100) / 500)
-    : telemetry.visualStress > 50
-      ? 0.24 + ((telemetry.visualStress - 50) / 50) * 0.10
-      : 0.10 + (telemetry.visualStress / 50) * 0.08;
+  const baseVignetteStrength = telemetry.visualStress >= 120
+    ? Math.min(0.50, 0.38 + (telemetry.visualStress - 120) / 500)
+    : telemetry.visualStress >= 90
+      ? 0.24 + ((telemetry.visualStress - 90) / 30) * 0.10
+      : 0.10 + (telemetry.visualStress / 90) * 0.08;
   const vignetteStrength = baseVignetteStrength * 0.85;
 
   return (
