@@ -4,6 +4,7 @@ import LugCarousel from "./LugCarousel";
 import AeroponicsGallery from "./AeroponicsGallery";
 import RocketGallery from "./RocketGallery";
 import TurbojetGallery from "./TurbojetGallery";
+import ExcelCarousel from "./ExcelCarousel";
 
 const projects = [
   {
@@ -270,12 +271,7 @@ export default function Home() {
                 <span>FEATURED WORK SAMPLE</span>
                 <b>XLSX</b>
               </div>
-              <div className="excel-preview">
-                <img
-                  src="/jaime-conde-portfolio/images/cash-allocation-dashboard.png"
-                  alt="Sanitized Excel cash-allocation dashboard with allocation table and chart"
-                />
-              </div>
+              <ExcelCarousel />
               <div className="excel-sample-copy">
                 <h3>Cash-Flow & Payroll Allocation Calculator</h3>
                 <p>

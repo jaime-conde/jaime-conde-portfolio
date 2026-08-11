@@ -692,6 +692,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .section-heading { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; align-items: start; margin: 58px 0 68px; }
+.experience .section-heading { margin-bottom: 34px; }
 .section-heading > p { margin: 8px 0 0; color: var(--amber); }
 .experience-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; align-items: start; }
 .experience-profile {
@@ -732,9 +733,20 @@ a { color: inherit; text-decoration: none; }
 .excel-sample-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .excel-sample-heading span { color: var(--cyan); font: 600 9px var(--font-geist-mono), monospace; letter-spacing: .14em; }
 .excel-sample-heading b { padding: 4px 7px; border: 1px solid rgba(81, 220, 255, .25); color: #9cb0c4; font: 8px var(--font-geist-mono), monospace; letter-spacing: .12em; }
-.excel-preview { margin-top: 14px; aspect-ratio: 16 / 8.6; overflow: hidden; border: 1px solid rgba(81, 220, 255, .18); background: #e8edf2; }
-.excel-preview img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; transition: transform .35s ease; }
-.excel-sample:hover .excel-preview img { transform: scale(1.015); }
+.excel-carousel { margin-top: 14px; outline: none; }
+.excel-preview { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid rgba(81, 220, 255, .18); background: #e8edf2; }
+.excel-track { height: 100%; display: flex; transition: transform .38s cubic-bezier(.22,.61,.36,1); }
+.excel-track figure { flex: 0 0 100%; height: 100%; margin: 0; display: grid; place-items: center; overflow: hidden; background: #eef2f5; }
+.excel-track img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+.excel-arrow { position: absolute; z-index: 2; top: 50%; width: 32px; height: 44px; border: 1px solid rgba(81,220,255,.35); background: rgba(3,10,20,.8); color: #d7f7ff; font-size: 25px; line-height: 1; cursor: pointer; transform: translateY(-50%); transition: background .2s ease, border-color .2s ease; }
+.excel-arrow:hover, .excel-arrow:focus-visible { background: rgba(10,31,50,.96); border-color: var(--cyan); }
+.excel-arrow-prev { left: 7px; }
+.excel-arrow-next { right: 7px; }
+.excel-carousel-meta { min-height: 34px; padding: 9px 1px 0; display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; color: #8195aa; font: 8px var(--font-geist-mono), monospace; letter-spacing: .08em; text-transform: uppercase; }
+.excel-carousel-meta strong { color: #b8c8d7; font-size: 9px; font-weight: 500; }
+.excel-dots { display: flex; gap: 5px; }
+.excel-dots button { width: 13px; height: 3px; padding: 0; border: 0; background: #30465b; cursor: pointer; }
+.excel-dots button.active { background: var(--cyan); }
 .excel-sample-copy h3 { margin: 18px 0 8px; color: #d4e0eb; font-size: 17px; line-height: 1.35; }
 .excel-sample-copy p { margin: 0; color: #8698ab; font-size: 12px; line-height: 1.65; }
 .excel-sample-copy ul { margin: 15px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
