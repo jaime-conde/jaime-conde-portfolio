@@ -60,6 +60,7 @@ export default function StructuralTelemetry() {
     let acceleration = 0;
     let visualStress = 0;
     let displayedStatus: Telemetry["status"] = "NOMINAL";
+    let cautionHoldUntil = 0;
     let criticalHoldUntil = 0;
     let lastRender = 0;
     let frame = 0;
@@ -145,18 +146,20 @@ export default function StructuralTelemetry() {
 
       // Keep the measured force and stress immediate, and give only the visual
       // warning layer severity-dependent persistence. Nominal responds with no
-      // added delay; caution clears quickly; critical briefly holds, then fades
-      // faster than the previous 1.8-second response.
+      // added delay. Caution lingers long enough to be readable, while critical
+      // releases sooner so the strongest warning does not dominate the page.
       if (stress >= visualStress) {
         visualStress = stress;
-        if (stress >= 100) criticalHoldUntil = now + 350;
+        if (stress >= 100) criticalHoldUntil = now + 150;
+        else if (stress >= 70) cautionHoldUntil = now + 500;
       } else if (stress < 70 && visualStress < 100) {
-        // Normal is intentionally immediate; only a critical event is allowed
-        // to persist before the screen returns to green.
-        visualStress = stress;
+        const blend = now < cautionHoldUntil
+          ? 0
+          : 1 - Math.exp(-deltaTime / 1.4);
+        visualStress += (stress - visualStress) * blend;
       } else {
         const isCriticalVisual = visualStress >= 100;
-        const timeConstant = isCriticalVisual ? 1.35 : 0.55;
+        const timeConstant = isCriticalVisual ? 0.75 : 1.4;
         const blend = now < criticalHoldUntil && isCriticalVisual
           ? 0
           : 1 - Math.exp(-deltaTime / timeConstant);
