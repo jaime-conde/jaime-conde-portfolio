@@ -1,4 +1,5 @@
 import StructuralTelemetry from "./StructuralTelemetry";
+import FeaBackground from "./FeaBackground";
 import ResearchCarousel from "./ResearchCarousel";
 import LugCarousel from "./LugCarousel";
 import AeroponicsGallery from "./AeroponicsGallery";
@@ -145,6 +146,7 @@ const skillGroups = [
 export default function Home() {
   return (
     <main>
+      <FeaBackground />
       <header className="mission-bar">
         <a className="wordmark" href="#launch" aria-label="Jaime Conde, return to top">
           J.C<span>{"//"}</span>STRUCTURAL PROFILE
