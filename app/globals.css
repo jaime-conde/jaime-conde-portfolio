@@ -698,6 +698,7 @@ a { color: inherit; text-decoration: none; }
 .experience-profile {
   position: sticky;
   top: 84px;
+  margin-top: -132px;
   padding: 28px;
   border: 1px solid var(--line);
   background:
@@ -780,6 +781,7 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
   .portrait-wrap { --portrait-size: 275px; order: 0; min-height: 350px; }
   .analysis-frame { width: 324px; height: 324px; }
   .project-grid, .section-heading, .experience-grid { grid-template-columns: 1fr; gap: 28px; }
+  .experience-profile { margin-top: 0; }
   .experience-profile { position: relative; top: auto; }
   .skill-grid { grid-template-columns: repeat(2, 1fr); }
   .rocket-gallery-heading { grid-template-columns: 1fr; gap: 16px; }
