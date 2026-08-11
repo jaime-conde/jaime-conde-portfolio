@@ -63,6 +63,49 @@ export default function StructuralTelemetry() {
     let criticalHoldUntil = 0;
     let lastRender = 0;
     let frame = 0;
+    let previousTouchY: number | null = null;
+    let previousTouchTime = 0;
+    let touchVelocity = 0;
+    let lastTouchSample = 0;
+
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      previousTouchY = touch.clientY;
+      previousTouchTime = performance.now();
+      touchVelocity = 0;
+      lastTouchSample = previousTouchTime;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch || previousTouchY === null) return;
+
+      const now = performance.now();
+      const touchDeltaTime = Math.max((now - previousTouchTime) / 1000, 0.001);
+      const estimatedScrollDelta = previousTouchY - touch.clientY;
+
+      // Mobile browsers may throttle scroll-position updates while a finger is
+      // down. Measure the gesture directly so touch scrolling drives the same
+      // virtual carriage model as a mouse wheel or trackpad.
+      touchVelocity = Math.max(
+        -6,
+        Math.min(6, (estimatedScrollDelta * 0.0015) / touchDeltaTime),
+      );
+      previousTouchY = touch.clientY;
+      previousTouchTime = now;
+      lastTouchSample = now;
+    };
+
+    const onTouchEnd = () => {
+      previousTouchY = null;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
     const update = (now: number) => {
       const elapsed = (now - start) / 1000;
@@ -72,8 +115,11 @@ export default function StructuralTelemetry() {
       // Treat page movement as a virtual instrumented carriage. Scroll position
       // is converted to metres, then differentiated and smoothed so the values
       // react to the visitor without amplifying single-frame browser noise.
-      const measuredVelocity = Math.max(-6, Math.min(6, (deltaScroll * 0.0015) / deltaTime));
-      const velocityBlend = deltaScroll === 0 ? 0.08 : 0.24;
+      const scrollVelocity = Math.max(-6, Math.min(6, (deltaScroll * 0.0015) / deltaTime));
+      const hasRecentTouchSample = now - lastTouchSample < 100;
+      const measuredVelocity = hasRecentTouchSample ? touchVelocity : scrollVelocity;
+      const hasMovement = hasRecentTouchSample || deltaScroll !== 0;
+      const velocityBlend = hasMovement ? 0.24 : 0.08;
       velocity += (measuredVelocity - velocity) * velocityBlend;
       const measuredAcceleration = (velocity - previousVelocity) / deltaTime;
       acceleration += (Math.max(-30, Math.min(30, measuredAcceleration)) - acceleration) * 0.16;
@@ -154,6 +200,10 @@ export default function StructuralTelemetry() {
 
     return () => {
       window.cancelAnimationFrame(frame);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
     };
   }, []);
 
