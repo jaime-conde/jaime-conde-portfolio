@@ -107,11 +107,11 @@ const experience = [
       "Coordinate documentation, team assignments, and rocket-development activities for a 20-plus-member student engineering organization.",
   },
   {
-    period: "2025",
+    period: "2026 – Present",
     role: "Vice President",
-    place: "Perimeter Motorsports",
+    place: "Grow Together Organization (GTO)",
     detail:
-      "Supported project planning, member coordination, and mechanical development for the student go-kart program.",
+      "Manage annual budgeting and funding documentation, helping increase available funding from approximately $500 to $900; support outreach to a 40-plus-member community and contribute to the design, assembly, and troubleshooting of the organization’s aeroponics system.",
   },
 ];
 
