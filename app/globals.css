@@ -57,6 +57,7 @@ a { color: inherit; text-decoration: none; }
 .telemetry .telemetry-time b { margin-right: 5px; }
 .telemetry-readouts > span:last-child { min-width: 132px; }
 .telemetry b { color: #60758c; font-weight: 600; }
+.telemetry b.stress-symbol { font-family: Arial, Helvetica, sans-serif; font-size: 1.08em; font-weight: 400; }
 .telemetry-readouts > span:last-child { color: #67e8a5; transition: color .25s ease, text-shadow .25s ease; }
 .telemetry-caution .telemetry-readouts > span:last-child { color: var(--amber); text-shadow: 0 0 12px rgba(255, 184, 76, .35); }
 .telemetry-critical .telemetry-readouts > span:last-child { color: #ff6b6b; text-shadow: 0 0 12px rgba(255, 107, 107, .45); }

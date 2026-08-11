@@ -158,10 +158,10 @@ export default function StructuralTelemetry() {
   }, []);
 
   const vignetteStrength = telemetry.visualStress > 100
-    ? Math.min(0.72, 0.54 + (telemetry.visualStress - 100) / 300)
+    ? Math.min(0.50, 0.38 + (telemetry.visualStress - 100) / 500)
     : telemetry.visualStress > 50
-      ? 0.38 + ((telemetry.visualStress - 50) / 50) * 0.14
-      : 0.18 + (telemetry.visualStress / 50) * 0.14;
+      ? 0.24 + ((telemetry.visualStress - 50) / 50) * 0.10
+      : 0.10 + (telemetry.visualStress / 50) * 0.08;
 
   return (
     <>
@@ -173,12 +173,12 @@ export default function StructuralTelemetry() {
           <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
           <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
           <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
-          <span><b>&sigma;</b> {telemetry.stress.toFixed(1)} MPA</span>
+          <span><b className="stress-symbol">σ</b> {telemetry.stress.toFixed(1)} MPA</span>
           <span><b>STATE</b> {telemetry.status}</span>
         </div>
         <div className="telemetry-equation" aria-hidden="true">
           <span>F = m|a| = 190 kg &times; {Math.abs(telemetry.acceleration).toFixed(2)} m/s&sup2; = {(telemetry.load * 1000).toFixed(0)} N</span>
-          <span>&sigma; = K<sub>t</sub>F/A = 1.32 &times; {(telemetry.load * 1000).toFixed(0)} N / 68 mm&sup2; = {telemetry.stress.toFixed(1)} MPa</span>
+          <span>σ = K<sub>t</sub>F/A = 1.32 &times; {(telemetry.load * 1000).toFixed(0)} N / 68 mm&sup2; = {telemetry.stress.toFixed(1)} MPa</span>
         </div>
       </div>
       {typeof document !== "undefined" && createPortal(
