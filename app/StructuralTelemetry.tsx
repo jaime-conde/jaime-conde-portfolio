@@ -88,14 +88,14 @@ export default function StructuralTelemetry() {
           ? "CAUTION"
           : "NOMINAL";
 
-      // Scroll acceleration drives inertial load through F = ma. A section-based
-      // preload keeps the virtual specimen engaged while it is stationary.
-      // Stress then follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
-      const preload = section <= 4 ? 2.2 : section <= 6 ? 5.4 : 8.1;
+      // Scroll acceleration drives inertial load through F = ma. The specimen
+      // keeps one constant preload everywhere on the page; section depth changes
+      // only the displayed state and vignette, never the mechanical values.
+      // Stress follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
+      const preload = 2.2;
       const effectiveMass = 260;
       const inertialLoad = (effectiveMass * Math.abs(acceleration)) / 1000;
-      const dragLoad = 0.32 * Math.abs(velocity);
-      const load = preload + inertialLoad + dragLoad;
+      const load = preload + inertialLoad;
       const stress = 1.32 * ((load * 1000) / 68);
 
       if (now - lastRender >= 80) {
