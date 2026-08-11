@@ -150,15 +150,15 @@ export default function StructuralTelemetry() {
       // releases sooner so the strongest warning does not dominate the page.
       if (stress >= visualStress) {
         visualStress = stress;
-        if (stress >= 110) criticalHoldUntil = now + 150;
+        if (stress >= 105) criticalHoldUntil = now + 150;
         else if (stress >= 70) cautionHoldUntil = now + 500;
-      } else if (stress < 70 && visualStress < 110) {
+      } else if (stress < 70 && visualStress < 105) {
         const blend = now < cautionHoldUntil
           ? 0
           : 1 - Math.exp(-deltaTime / 1.4);
         visualStress += (stress - visualStress) * blend;
       } else {
-        const isCriticalVisual = visualStress >= 110;
+        const isCriticalVisual = visualStress >= 105;
         const timeConstant = isCriticalVisual ? 0.75 : 1.4;
         const blend = now < criticalHoldUntil && isCriticalVisual
           ? 0
@@ -168,13 +168,13 @@ export default function StructuralTelemetry() {
       if (visualStress < 0.1 && stress < 0.1) visualStress = 0;
 
       // Hysteresis prevents the state from flickering when stress sits close
-      // to a threshold. Entry is 70/110 MPa; exit requires a clear drop.
+      // to a threshold. Entry is 70/105 MPa; exit requires a clear drop.
       if (displayedStatus === "CRITICAL") {
-        if (visualStress < 102) displayedStatus = visualStress >= 70 ? "CAUTION" : "NOMINAL";
+        if (visualStress < 97) displayedStatus = visualStress >= 70 ? "CAUTION" : "NOMINAL";
       } else if (displayedStatus === "CAUTION") {
-        if (visualStress >= 110) displayedStatus = "CRITICAL";
+        if (visualStress >= 105) displayedStatus = "CRITICAL";
         else if (visualStress < 62) displayedStatus = "NOMINAL";
-      } else if (visualStress >= 110) {
+      } else if (visualStress >= 105) {
         displayedStatus = "CRITICAL";
       } else if (visualStress >= 70) {
         displayedStatus = "CAUTION";
@@ -210,10 +210,10 @@ export default function StructuralTelemetry() {
     };
   }, []);
 
-  const baseVignetteStrength = telemetry.visualStress >= 110
-    ? Math.min(0.50, 0.38 + (telemetry.visualStress - 110) / 500)
+  const baseVignetteStrength = telemetry.visualStress >= 105
+    ? Math.min(0.50, 0.38 + (telemetry.visualStress - 105) / 500)
     : telemetry.visualStress >= 70
-      ? 0.24 + ((telemetry.visualStress - 70) / 40) * 0.10
+      ? 0.24 + ((telemetry.visualStress - 70) / 35) * 0.10
       : 0.10 + (telemetry.visualStress / 70) * 0.08;
   const vignetteStrength = baseVignetteStrength * 0.85;
 
