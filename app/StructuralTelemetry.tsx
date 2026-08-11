@@ -1,3 +1,22 @@
+
+.github/
+.gitignore
+.npmrc
+README.md
+app/
+build/
+eslint.config.mjs
+next.config.mjs
+next.config.ts
+package-lock.json
+package.json
+postcss.config.mjs
+public/
+scripts/
+tests/
+tsconfig.json
+vite.config.ts
+worker/
 "use client";
 
 import { useEffect, useState } from "react";
@@ -56,6 +75,9 @@ export default function StructuralTelemetry() {
     let velocity = 0;
     let previousVelocity = 0;
     let acceleration = 0;
+    let displayedLoad = 0;
+    let displayedStatus: Telemetry["status"] = "NOMINAL";
+    let holdUntil = 0;
     let lastRender = 0;
     let frame = 0;
 
@@ -88,19 +110,50 @@ export default function StructuralTelemetry() {
       // Scroll acceleration drives inertial load through F = ma. There is no
       // static preload, so the mechanical values settle to zero at rest.
       // Stress follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
-      const effectiveMass = 260;
-      const inertialLoad = (effectiveMass * Math.abs(acceleration)) / 1000;
-      const load = inertialLoad;
+      const effectiveMass = 190;
+      const targetLoad = (effectiveMass * Math.abs(acceleration)) / 1000;
+
+      // Model a damped instrument instead of exposing noisy frame-by-frame
+      // acceleration. Peaks rise smoothly, hold briefly, then decay slowly so
+      // the structural state is visible rather than flashing past.
+      const isRising = targetLoad > displayedLoad;
+      if (isRising) holdUntil = now + 650;
+      const timeConstant = isRising ? 0.14 : now < holdUntil ? Infinity : 1.8;
+      const loadBlend = Number.isFinite(timeConstant)
+        ? 1 - Math.exp(-deltaTime / timeConstant)
+        : 0;
+      displayedLoad += (targetLoad - displayedLoad) * loadBlend;
+      if (displayedLoad < 0.002 && targetLoad < 0.002) displayedLoad = 0;
+
+      const load = displayedLoad;
       const stress = 1.32 * ((load * 1000) / 68);
-      const status = stress > 80
-        ? "CRITICAL"
-        : stress > 50
-          ? "CAUTION"
-          : "NOMINAL";
+
+      // Hysteresis prevents the state from flickering when stress sits close
+      // to a threshold. Entry remains 50/80 MPa; exit requires a clear drop.
+      if (displayedStatus === "CRITICAL") {
+        if (stress < 74) displayedStatus = stress > 50 ? "CAUTION" : "NOMINAL";
+      } else if (displayedStatus === "CAUTION") {
+        if (stress > 80) displayedStatus = "CRITICAL";
+        else if (stress < 44) displayedStatus = "NOMINAL";
+      } else if (stress > 80) {
+        displayedStatus = "CRITICAL";
+      } else if (stress > 50) {
+        displayedStatus = "CAUTION";
+      }
+
+      const displayedAcceleration = load === 0 ? 0 : (load * 1000) / effectiveMass;
 
       if (now - lastRender >= 80) {
         lastRender = now;
-        setTelemetry({ elapsed, section, velocity, acceleration, load, stress, status });
+        setTelemetry({
+          elapsed,
+          section,
+          velocity,
+          acceleration: displayedAcceleration,
+          load,
+          stress,
+          status: displayedStatus,
+        });
       }
 
       frame = window.requestAnimationFrame(update);
@@ -133,7 +186,7 @@ export default function StructuralTelemetry() {
           <span><b>STATE</b> {telemetry.status}</span>
         </div>
         <div className="telemetry-equation" aria-hidden="true">
-          <span>F = m|a| = 260 kg &times; {Math.abs(telemetry.acceleration).toFixed(2)} m/s&sup2; = {(telemetry.load * 1000).toFixed(0)} N</span>
+          <span>F = m|a| = 190 kg &times; {Math.abs(telemetry.acceleration).toFixed(2)} m/s&sup2; = {(telemetry.load * 1000).toFixed(0)} N</span>
           <span>&sigma; = K<sub>t</sub>F/A = 1.32 &times; {(telemetry.load * 1000).toFixed(0)} N / 68 mm&sup2; = {telemetry.stress.toFixed(1)} MPa</span>
         </div>
       </div>
