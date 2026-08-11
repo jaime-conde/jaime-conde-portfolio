@@ -110,7 +110,7 @@ export default function StructuralTelemetry() {
         visualStress = stress;
       } else {
         const isCriticalVisual = visualStress > 100;
-        const timeConstant = isCriticalVisual ? 1.05 : 0.32;
+        const timeConstant = isCriticalVisual ? 1.35 : 0.55;
         const blend = now < criticalHoldUntil && isCriticalVisual
           ? 0
           : 1 - Math.exp(-deltaTime / timeConstant);
