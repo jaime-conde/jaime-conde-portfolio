@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
 type Telemetry = {
@@ -84,20 +85,18 @@ export default function StructuralTelemetry() {
         if (element && element.offsetTop <= probe) section = index + 1;
       });
 
-      const status = section >= 7
-        ? "CRITICAL"
-        : section >= 5
-          ? "CAUTION"
-          : "NOMINAL";
-
       // Scroll acceleration drives inertial load through F = ma. There is no
-      // static preload, so the mechanical values settle to zero at rest. Section
-      // depth changes only the displayed state and vignette.
+      // static preload, so the mechanical values settle to zero at rest.
       // Stress follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
       const effectiveMass = 260;
       const inertialLoad = (effectiveMass * Math.abs(acceleration)) / 1000;
       const load = inertialLoad;
       const stress = 1.32 * ((load * 1000) / 68);
+      const status = stress > 80
+        ? "CRITICAL"
+        : stress > 50
+          ? "CAUTION"
+          : "NOMINAL";
 
       if (now - lastRender >= 80) {
         lastRender = now;
@@ -113,6 +112,12 @@ export default function StructuralTelemetry() {
       window.cancelAnimationFrame(frame);
     };
   }, []);
+
+  const vignetteStrength = telemetry.stress > 80
+    ? Math.min(0.72, 0.54 + (telemetry.stress - 80) / 300)
+    : telemetry.stress > 50
+      ? 0.38 + ((telemetry.stress - 50) / 30) * 0.14
+      : 0.18 + (telemetry.stress / 50) * 0.14;
 
   return (
     <>
@@ -135,6 +140,7 @@ export default function StructuralTelemetry() {
       {typeof document !== "undefined" && createPortal(
         <div
           className={`structural-vignette vignette-${telemetry.status.toLowerCase()}`}
+          style={{ "--vignette-opacity": vignetteStrength } as CSSProperties}
           aria-hidden="true"
         />,
         document.body,
