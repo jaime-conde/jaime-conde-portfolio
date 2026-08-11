@@ -317,14 +317,16 @@ export default function Home() {
       </section>
 
       <section className="payload shell">
-        <div className="section-heading">
-          <p>METHODS / TOOLKIT</p>
+        <div className="section-heading toolkit-heading">
+          <div className="toolkit-heading-copy">
+            <p>METHODS / TOOLKIT</p>
+            <p className="toolkit-intro">
+              My toolkit spans the full development loop—from modeling and analysis to
+              documentation, fabrication, and hands-on validation.
+            </p>
+          </div>
           <h2>Tools for turning questions into testable designs.</h2>
         </div>
-        <p className="toolkit-intro">
-          My toolkit spans the full development loop—from modeling and analysis to
-          documentation, fabrication, and hands-on validation.
-        </p>
         <div className="toolkit-grid">
           {skillGroups.map((group) => (
             <article className="toolkit-card" key={group.title}>
