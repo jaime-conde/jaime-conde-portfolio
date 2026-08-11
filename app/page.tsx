@@ -89,7 +89,7 @@ const experience = [
     role: "Construction Project Assistant",
     place: "JCR Contractor LLC · Atlanta, Georgia",
     detail:
-      "Manage project budgets, pay applications, purchases, and expense tracking; coordinate crews of 5–10, schedules, deliveries, and communication between field teams and project managers; and support estimates and financial planning.",
+      "Built Excel calculators for project budgeting and payroll, automate payroll workflows, audit expenses, organize tax-season records, and plan expenditures around project budgets and tax treatment.",
   },
   {
     period: "Summer 2026",
@@ -124,6 +124,7 @@ const skills = [
   "Python",
   "OpenCV",
   "C / C++",
+  "Microsoft Excel",
   "3D printing",
   "Mechanical assembly",
   "Technical documentation",
@@ -250,17 +251,37 @@ export default function Home() {
           <p>07 / EXPERIENCE</p>
           <h2>Leading in the shop,<br />the field, and the classroom.</h2>
         </div>
-        <div className="timeline">
-          {experience.map((item) => (
-            <article key={`${item.period}-${item.role}`}>
-              <time>{item.period}</time>
-              <div>
-                <h3>{item.role}</h3>
-                <p className="place">{item.place}</p>
-                <p>{item.detail}</p>
-              </div>
-            </article>
-          ))}
+        <div className="experience-grid">
+          <aside className="experience-profile" aria-label="Experience profile summary">
+            <p className="experience-profile-label">WORK PROFILE / 2022—2026</p>
+            <strong>Technical work across four operating environments.</strong>
+            <p>
+              Applying engineering thinking beyond coursework through project operations,
+              student leadership, aerospace outreach, and hands-on development.
+            </p>
+            <div className="experience-domains" aria-label="Experience areas">
+              <span><b>01</b> Operations</span>
+              <span><b>02</b> Leadership</span>
+              <span><b>03</b> Outreach</span>
+              <span><b>04</b> Engineering</span>
+            </div>
+            <div className="experience-note">
+              <span>APPLIED TOOL</span>
+              <p>Excel calculators for budgeting and payroll workflows</p>
+            </div>
+          </aside>
+          <div className="timeline">
+            {experience.map((item) => (
+              <article key={`${item.period}-${item.role}`}>
+                <time>{item.period}</time>
+                <div>
+                  <h3>{item.role}</h3>
+                  <p className="place">{item.place}</p>
+                  <p>{item.detail}</p>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
