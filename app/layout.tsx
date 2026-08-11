@@ -7,7 +7,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 const assetPrefix = process.env.GITHUB_ACTIONS === "true" ? "/jaime-conde-portfolio" : "";
 
 export const metadata: Metadata = {
-  title: "Jaime Conde | Aerospace Engineering Portfolio",
+  title: "Portfolio",
   description:
     "Engineering portfolio of Jaime Conde—computational research, lightweight structures, additive manufacturing, and STEM outreach.",
   icons: {
