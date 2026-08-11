@@ -7,6 +7,7 @@ type Telemetry = {
   elapsed: number;
   section: number;
   velocity: number;
+  acceleration: number;
   load: number;
   stress: number;
   status: "NOMINAL" | "CAUTION" | "CRITICAL";
@@ -16,6 +17,7 @@ const initialTelemetry: Telemetry = {
   elapsed: 0,
   section: 1,
   velocity: 0,
+  acceleration: 0,
   load: 0,
   stress: 0,
   status: "NOMINAL",
@@ -88,19 +90,18 @@ export default function StructuralTelemetry() {
           ? "CAUTION"
           : "NOMINAL";
 
-      // Scroll acceleration drives inertial load through F = ma. The specimen
-      // keeps one constant preload everywhere on the page; section depth changes
-      // only the displayed state and vignette, never the mechanical values.
+      // Scroll acceleration drives inertial load through F = ma. There is no
+      // static preload, so the mechanical values settle to zero at rest. Section
+      // depth changes only the displayed state and vignette.
       // Stress follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
-      const preload = 2.2;
       const effectiveMass = 260;
       const inertialLoad = (effectiveMass * Math.abs(acceleration)) / 1000;
-      const load = preload + inertialLoad;
+      const load = inertialLoad;
       const stress = 1.32 * ((load * 1000) / 68);
 
       if (now - lastRender >= 80) {
         lastRender = now;
-        setTelemetry({ elapsed, section, velocity, load, stress, status });
+        setTelemetry({ elapsed, section, velocity, acceleration, load, stress, status });
       }
 
       frame = window.requestAnimationFrame(update);
@@ -117,13 +118,19 @@ export default function StructuralTelemetry() {
     <>
       <div
         className={`telemetry telemetry-${telemetry.status.toLowerCase()}`}
-        aria-label={`Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
+        aria-label={`Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
       >
-        <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
-        <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
-        <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
-        <span><b>&sigma;</b> {telemetry.stress.toFixed(1)} MPA</span>
-        <span><b>STATE</b> {telemetry.status}</span>
+        <div className="telemetry-readouts">
+          <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
+          <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
+          <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
+          <span><b>&sigma;</b> {telemetry.stress.toFixed(1)} MPA</span>
+          <span><b>STATE</b> {telemetry.status}</span>
+        </div>
+        <div className="telemetry-equation" aria-hidden="true">
+          <span>F = m|a| = 260 kg &times; {Math.abs(telemetry.acceleration).toFixed(2)} m/s&sup2; = {(telemetry.load * 1000).toFixed(0)} N</span>
+          <span>&sigma; = K<sub>t</sub>F/A = 1.32 &times; {(telemetry.load * 1000).toFixed(0)} N / 68 mm&sup2; = {telemetry.stress.toFixed(1)} MPa</span>
+        </div>
       </div>
       {typeof document !== "undefined" && createPortal(
         <div
