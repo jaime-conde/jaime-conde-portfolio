@@ -157,11 +157,12 @@ export default function StructuralTelemetry() {
     };
   }, []);
 
-  const vignetteStrength = telemetry.visualStress > 100
+  const baseVignetteStrength = telemetry.visualStress > 100
     ? Math.min(0.50, 0.38 + (telemetry.visualStress - 100) / 500)
     : telemetry.visualStress > 50
       ? 0.24 + ((telemetry.visualStress - 50) / 50) * 0.10
       : 0.10 + (telemetry.visualStress / 50) * 0.08;
+  const vignetteStrength = baseVignetteStrength * 0.85;
 
   return (
     <>
@@ -173,7 +174,7 @@ export default function StructuralTelemetry() {
           <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
           <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
           <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
-          <span><b className="stress-symbol">σ</b> {telemetry.stress.toFixed(1)} MPA</span>
+          <span><b className="stress-symbol" aria-label="sigma, normal stress">σ</b> {telemetry.stress.toFixed(1)} MPA</span>
           <span><b>STATE</b> {telemetry.status}</span>
         </div>
         <div className="telemetry-equation" aria-hidden="true">

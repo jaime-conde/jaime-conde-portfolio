@@ -147,7 +147,7 @@ export default function Home() {
     <main>
       <header className="mission-bar">
         <a className="wordmark" href="#launch" aria-label="Jaime Conde, return to top">
-          J.C<span>//</span>STRUCTURAL PROFILE
+          J.C<span>{"//"}</span>STRUCTURAL PROFILE
         </a>
         <StructuralTelemetry />
       </header>
@@ -216,9 +216,25 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="trajectory shell" aria-hidden="true">
-        <span>RESEARCH</span><i /><span>ANALYSIS + DESIGN</span><i /><span>VALIDATION</span>
-      </div>
+      <nav className="trajectory shell" aria-label="Engineering workflow and project shortcuts">
+        <a href="#research">
+          <small>01 / INVESTIGATE</small>
+          <strong>Research</strong>
+          <span>Computational chemistry</span>
+        </a>
+        <i aria-hidden="true" />
+        <a href="#design">
+          <small>02 / DEVELOP</small>
+          <strong>Analysis + Design</strong>
+          <span>Stress-driven structures</span>
+        </a>
+        <i aria-hidden="true" />
+        <a href="#aeroponics">
+          <small>03 / VERIFY</small>
+          <strong>Validation</strong>
+          <span>Build and system testing</span>
+        </a>
+      </nav>
 
       {projects.map((project, index) => (
         <section className="project shell" id={project.id} key={project.title}>
