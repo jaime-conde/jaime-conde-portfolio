@@ -94,7 +94,7 @@ export default function AeroponicsGallery() {
         </div>
         <iframe
           className="project-document-viewer"
-          src={`${base}aeroponic-project-presentation.pdf#view=FitH`}
+          src={`${base}aeroponic-project-presentation.pdf#view=Fit&zoom=page-fit`}
           title="Aeroponic project planning and budget presentation"
         />
         <p className="document-note">Scroll through the presentation above, or download the PDF or editable PowerPoint.</p>
