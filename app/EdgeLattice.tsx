@@ -4,12 +4,17 @@ import { useEffect, useRef } from "react";
 
 type Point = { x: number; y: number };
 type Impulse = { x: number; y: number; t: number };
+type PointerState = { x: number; y: number; active: boolean };
 
 const MIN_WIDTH = 820;
-const FRAME_INTERVAL = 1000 / 30;
 const TOP_PAD = 52;
 const BOTTOM_PAD = 72;
-const ISOS = [-0.62, -0.08, 0.5];
+const LAYERS = [
+  { phase: 0.0, offsetX: 0, offsetY: 0, alpha: 1.0, width: 1.0 },
+  { phase: 1.25, offsetX: 7, offsetY: -5, alpha: 0.56, width: 0.82 },
+  { phase: 2.35, offsetX: 13, offsetY: -10, alpha: 0.32, width: 0.68 },
+];
+const ISOS = [-0.52, 0.12, 0.68];
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -29,16 +34,17 @@ export default function EdgeLattice() {
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const wideEnough = window.matchMedia(`(min-width: ${MIN_WIDTH}px)`);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const pointer: PointerState = { x: -1000, y: -1000, active: false };
+    const impulses: Impulse[] = [];
 
     let width = 0;
     let height = 0;
     let pixelRatio = 1;
     let frame = 0;
-    let lastRendered = -FRAME_INTERVAL;
-
-    const impulses: Impulse[] = [];
+    let interactionUntil = 0;
+    let lastMoveDraw = 0;
 
     const documentHeight = () =>
       Math.max(
@@ -51,42 +57,69 @@ export default function EdgeLattice() {
     const resize = () => {
       width = document.documentElement.clientWidth;
       height = documentHeight();
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.35);
       canvas.width = Math.round(width * pixelRatio);
       canvas.height = Math.round(height * pixelRatio);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      requestDraw();
     };
 
-    const rippleValue = (x: number, y: number, now: number) => {
-      let ripple = 0;
+    const edgeBand = () => Math.min(520, Math.max(300, width * 0.34));
 
-      for (let i = impulses.length - 1; i >= 0; i -= 1) {
-        const impulse = impulses[i];
-        const age = now - impulse.t;
-        if (age > 1800) continue;
+    const edgeWeightAt = (x: number) => {
+      const edgeDistance = Math.min(x, width - x);
+      const band = edgeBand();
+      return 1 - smoothstep(band * 0.32, band, edgeDistance);
+    };
 
-        const dx = x - impulse.x;
-        const dy = y - impulse.y;
-        const distance = Math.hypot(dx, dy);
+    const dotWeightAt = (x: number) => {
+      const edgeDistance = Math.min(x, width - x);
+      const band = edgeBand();
+      return smoothstep(band * 0.18, band * 0.92, edgeDistance);
+    };
 
-        ripple +=
-          Math.sin(distance * 0.072 - age * 0.018) *
-          Math.exp(-distance * 0.0115) *
-          Math.exp(-age * 0.0026);
+    const localInteraction = (x: number, y: number, now: number) => {
+      let hover = 0;
+      if (pointer.active) {
+        const distance = Math.hypot(pointer.x - x, pointer.y - y);
+        hover = smoothstep(250, 0, distance);
       }
 
-      return ripple;
+      let click = 0;
+      for (const impulse of impulses) {
+        const age = now - impulse.t;
+        if (age > 1200) continue;
+        const distance = Math.hypot(impulse.x - x, impulse.y - y);
+        const radial = Math.exp(-distance * 0.0085);
+        const temporal = Math.exp(-age * 0.0032);
+        click += radial * temporal;
+      }
+
+      return { hover, click: clamp(click, 0, 1.5) };
     };
 
-    const gyroidField = (x: number, y: number, now: number) => {
-      const t = reducedMotion.matches ? 0 : now * 0.0005;
-      const ripple = rippleValue(x, y, now);
-      const sx = x * 0.017 + t * 1.25 + ripple * 0.6;
-      const sy = y * 0.015 - t * 0.8 - ripple * 0.45;
-      const sz = x * 0.007 - y * 0.005 + t * 1.6 + ripple * 0.7;
+    const gyroidField = (
+      x: number,
+      y: number,
+      phase: number,
+      now: number,
+    ) => {
+      const interaction = localInteraction(x, y, now);
+      const edge = edgeWeightAt(x);
+      const baseFrequency = 0.0154 + edge * 0.0062;
+      const frequency =
+        baseFrequency *
+        (1 + interaction.hover * 0.42 + interaction.click * 0.95);
+
+      const sx = x * frequency + phase + interaction.click * 1.7;
+      const sy = y * frequency * 0.93 - phase * 0.62 - interaction.hover * 0.45;
+      const sz =
+        x * frequency * 0.58 -
+        y * frequency * 0.34 +
+        phase * 1.15 +
+        interaction.click * 2.45;
 
       return (
         Math.sin(sx) * Math.cos(sy) +
@@ -104,7 +137,6 @@ export default function EdgeLattice() {
     ) => {
       const denominator = valueB - valueA;
       const t = Math.abs(denominator) < 1e-6 ? 0.5 : (iso - valueA) / denominator;
-
       return {
         x: a.x + (b.x - a.x) * t,
         y: a.y + (b.y - a.y) * t,
@@ -138,23 +170,19 @@ export default function EdgeLattice() {
         context.moveTo(intersections[0].point.x, intersections[0].point.y);
         context.lineTo(intersections[1].point.x, intersections[1].point.y);
         context.stroke();
-        return;
-      }
-
-      if (intersections.length === 4) {
+      } else if (intersections.length === 4) {
         const center = (v0 + v1 + v2 + v3) * 0.25;
         const top = intersections.find((entry) => entry.edge === "top")?.point;
         const right = intersections.find((entry) => entry.edge === "right")?.point;
         const bottom = intersections.find((entry) => entry.edge === "bottom")?.point;
         const left = intersections.find((entry) => entry.edge === "left")?.point;
-
         if (!top || !right || !bottom || !left) return;
 
-        const pairings: [Point, Point][] = center >= iso
+        const pairs: [Point, Point][] = center >= iso
           ? [[top, left], [right, bottom]]
           : [[top, right], [bottom, left]];
 
-        for (const [start, end] of pairings) {
+        for (const [start, end] of pairs) {
           context.beginPath();
           context.moveTo(start.x, start.y);
           context.lineTo(end.x, end.y);
@@ -163,94 +191,87 @@ export default function EdgeLattice() {
       }
     };
 
-    const fieldWeightsAt = (x: number) => {
-      const edgeDistance = Math.min(x, width - x);
-      const transitionWidth = Math.min(560, Math.max(330, width * 0.36));
-      const normalized = clamp(edgeDistance / transitionWidth, 0, 1);
-
-      return {
-        gyroid: 1 - smoothstep(0.16, 0.92, normalized),
-        dots: smoothstep(0.22, 0.86, normalized),
-        overlap: 1 - Math.abs(normalized * 2 - 1),
-      };
-    };
-
-    const drawGyroid = (now: number) => {
-      const step = width > 1500 ? 20 : 22;
+    const drawStackedGyroid = (now: number) => {
+      const step = width > 1500 ? 24 : 26;
       const yStart = TOP_PAD;
       const yEnd = Math.max(yStart + 160, height - BOTTOM_PAD);
 
-      for (let y = yStart; y < yEnd; y += step) {
-        for (let x = 0; x < width; x += step) {
-          const weights = fieldWeightsAt(x + step * 0.5);
-          if (weights.gyroid < 0.012) continue;
+      for (const layer of LAYERS) {
+        for (let y = yStart; y < yEnd; y += step) {
+          for (let x = 0; x < width; x += step) {
+            const centerX = x + step * 0.5;
+            const edgeBlend = edgeWeightAt(centerX);
+            if (edgeBlend < 0.018) continue;
 
-          const topLeft = { x, y };
-          const topRight = { x: Math.min(x + step, width), y };
-          const bottomRight = {
-            x: Math.min(x + step, width),
-            y: Math.min(y + step, yEnd),
-          };
-          const bottomLeft = { x, y: Math.min(y + step, yEnd) };
+            const local = localInteraction(centerX, y + step * 0.5, now);
+            const transitionDots = dotWeightAt(centerX);
+            const contourAlpha =
+              (0.035 + edgeBlend * 0.15) *
+              layer.alpha *
+              (1 - transitionDots * 0.42) *
+              (1 + local.hover * 0.48 + local.click * 0.72);
 
-          const values: [number, number, number, number] = [
-            gyroidField(topLeft.x, topLeft.y, now),
-            gyroidField(topRight.x, topRight.y, now),
-            gyroidField(bottomRight.x, bottomRight.y, now),
-            gyroidField(bottomLeft.x, bottomLeft.y, now),
-          ];
+            const topLeft = { x: x + layer.offsetX, y: y + layer.offsetY };
+            const topRight = { x: Math.min(x + step, width) + layer.offsetX, y: y + layer.offsetY };
+            const bottomRight = {
+              x: Math.min(x + step, width) + layer.offsetX,
+              y: Math.min(y + step, yEnd) + layer.offsetY,
+            };
+            const bottomLeft = {
+              x: x + layer.offsetX,
+              y: Math.min(y + step, yEnd) + layer.offsetY,
+            };
 
-          const pulse = Math.min(1, Math.abs(rippleValue(x + step * 0.5, y + step * 0.5, now)));
+            const values: [number, number, number, number] = [
+              gyroidField(topLeft.x, topLeft.y, layer.phase, now),
+              gyroidField(topRight.x, topRight.y, layer.phase, now),
+              gyroidField(bottomRight.x, bottomRight.y, layer.phase, now),
+              gyroidField(bottomLeft.x, bottomLeft.y, layer.phase, now),
+            ];
 
-          for (const iso of ISOS) {
-            const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
-            const alpha =
-              (0.035 + isoWeight * 0.11 + pulse * 0.16) *
-              Math.pow(weights.gyroid, 1.2);
-            const widthScale =
-              0.7 + isoWeight * 0.85 + weights.gyroid * 1.05 + pulse * 1.4;
-
-            context.strokeStyle = `rgba(118, 222, 255, ${alpha})`;
-            context.lineWidth = widthScale;
-            drawContourCell([topLeft, topRight, bottomRight, bottomLeft], values, iso);
+            for (const iso of ISOS) {
+              const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
+              context.strokeStyle = `rgba(119, 222, 248, ${contourAlpha * (0.62 + isoWeight * 0.38)})`;
+              context.lineWidth =
+                (0.7 + isoWeight * 0.9 + edgeBlend * 1.15) * layer.width;
+              drawContourCell([topLeft, topRight, bottomRight, bottomLeft], values, iso);
+            }
           }
         }
       }
     };
 
     const drawDots = (now: number) => {
-      const gap = width > 1500 ? 46 : 50;
+      const gap = width > 1500 ? 58 : 54;
       const yStart = TOP_PAD;
       const yEnd = Math.max(yStart + 160, height - BOTTOM_PAD);
 
       for (let y = yStart; y < yEnd; y += gap) {
-        const offset = (Math.floor(y / gap) % 2) * gap * 0.5;
+        const rowOffset = (Math.floor(y / gap) % 2) * gap * 0.5;
+        for (let x = rowOffset; x < width; x += gap) {
+          const dotBlend = dotWeightAt(x);
+          if (dotBlend < 0.04) continue;
 
-        for (let x = offset; x < width; x += gap) {
-          const weights = fieldWeightsAt(x);
-          if (weights.dots < 0.02) continue;
-
-          const ripple = rippleValue(x, y, now);
-          const field = gyroidField(x, y, now);
-          const transitionWarp = weights.overlap * field * 2.4;
-          const drawX = x + transitionWarp;
-          const drawY = y + weights.overlap * Math.sin(field * 1.7) * 2.4;
+          const edgeBlend = edgeWeightAt(x);
+          const local = localInteraction(x, y, now);
+          const gyroidSample = Math.abs(gyroidField(x, y, 0.4, now));
+          const transitionMod = 0.72 + (1 - Math.min(1, gyroidSample)) * 0.52;
 
           const radius =
-            0.42 +
-            weights.dots * 0.8 +
-            weights.overlap * 0.34 +
-            Math.max(0, ripple) * 2.25;
+            0.5 +
+            dotBlend * 0.82 +
+            edgeBlend * 0.35 +
+            local.hover * 0.6 +
+            local.click * 2.35;
 
           const alpha =
-            0.025 +
-            weights.dots * 0.09 +
-            weights.overlap * 0.045 +
-            Math.min(0.16, Math.abs(ripple) * 0.14);
+            (0.035 + dotBlend * 0.09 + edgeBlend * 0.045) *
+            transitionMod +
+            local.click * 0.09;
 
           context.beginPath();
-          context.arc(drawX, drawY, radius, 0, Math.PI * 2);
-          context.fillStyle = `rgba(158, 225, 255, ${alpha})`;
+          context.arc(x, y, radius, 0, Math.PI * 2);
+          context.fillStyle = `rgba(160, 225, 255, ${Math.min(0.32, alpha)})`;
           context.fill();
         }
       }
@@ -258,66 +279,79 @@ export default function EdgeLattice() {
 
     const pruneImpulses = (now: number) => {
       for (let i = impulses.length - 1; i >= 0; i -= 1) {
-        if (now - impulses[i].t > 1800) impulses.splice(i, 1);
+        if (now - impulses[i].t > 1200) impulses.splice(i, 1);
       }
     };
 
-    const draw = (now: number) => {
-      if (now - lastRendered < FRAME_INTERVAL) {
-        frame = window.requestAnimationFrame(draw);
-        return;
-      }
-
-      lastRendered = now;
+    const render = (now = performance.now()) => {
+      frame = 0;
       pruneImpulses(now);
       context.clearRect(0, 0, width, height);
+      if (!wideEnough.matches) return;
 
-      if (wideEnough.matches) {
-        drawGyroid(now);
-        drawDots(now);
-      }
+      drawStackedGyroid(now);
+      drawDots(now);
 
-      if (!reducedMotion.matches || impulses.length > 0) {
-        frame = window.requestAnimationFrame(draw);
+      if (!reducedMotion.matches && (impulses.length > 0 || now < interactionUntil)) {
+        frame = window.requestAnimationFrame(render);
       }
     };
 
-    const addImpulse = (event: PointerEvent) => {
+    function requestDraw() {
+      if (frame) return;
+      frame = window.requestAnimationFrame(render);
+    }
+
+    const move = (event: PointerEvent) => {
+      if (event.pointerType === "touch") return;
+      pointer.x = event.pageX;
+      pointer.y = event.pageY;
+      pointer.active = true;
+      interactionUntil = performance.now() + 90;
+
+      const now = performance.now();
+      if (now - lastMoveDraw > 34) {
+        lastMoveDraw = now;
+        requestDraw();
+      }
+    };
+
+    const leave = () => {
+      pointer.active = false;
+      requestDraw();
+    };
+
+    const click = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("a, button, input, textarea, select, summary, [role='button']")) return;
 
-      impulses.push({
-        x: event.pageX,
-        y: event.pageY,
-        t: performance.now(),
-      });
-
-      if (impulses.length > 5) impulses.shift();
-      if (reducedMotion.matches) draw(performance.now());
+      impulses.push({ x: event.pageX, y: event.pageY, t: performance.now() });
+      if (impulses.length > 4) impulses.shift();
+      interactionUntil = performance.now() + 1200;
+      requestDraw();
     };
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(resize)
+      : null;
+
+    resizeObserver?.observe(document.body);
+    window.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("resize", resize);
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointerdown", click, { passive: true });
+    document.documentElement.addEventListener("mouseleave", leave);
 
     resize();
 
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => resize())
-        : null;
-
-    resizeObserver?.observe(document.body);
-
-    window.addEventListener("resize", resize);
-    window.visualViewport?.addEventListener("resize", resize);
-    window.addEventListener("pointerdown", addImpulse, { passive: true });
-
-    if (reducedMotion.matches) draw(performance.now());
-    else frame = window.requestAnimationFrame(draw);
-
     return () => {
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
       resizeObserver?.disconnect();
       window.removeEventListener("resize", resize);
       window.visualViewport?.removeEventListener("resize", resize);
-      window.removeEventListener("pointerdown", addImpulse);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerdown", click);
+      document.documentElement.removeEventListener("mouseleave", leave);
     };
   }, []);
 
