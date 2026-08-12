@@ -11,7 +11,7 @@ const GRID_SPACING = 31;
 const DEPTH_LAYERS = 3;
 const PULSE_DURATION = 1200;
 const MAX_PULSES = 3;
-const HOVER_MIN = 72;
+const HOVER_MIN = 24;
 const HOVER_MAX = 160;
 const CLICK_MIN = 88;
 const CLICK_MAX = 190;
@@ -79,11 +79,13 @@ export default function EdgeLattice() {
       const distanceToEdge = Math.min(x, width - x);
       return 1 - smoothstep(width * 0.12, width * 0.46, distanceToEdge);
     };
-    const hoverRadiusAt = (x: number) => lerp(HOVER_MIN, HOVER_MAX, edgeInfluence(x));
+    const hoverBlendAt = (x: number) => smoothstep(0.08, 0.92, edgeInfluence(x));
+    const hoverRadiusAt = (x: number) => lerp(HOVER_MIN, HOVER_MAX, hoverBlendAt(x));
+    const hoverStrengthAt = (x: number) => Math.pow(hoverBlendAt(x), 1.15);
+    const hoverActiveAt = (x: number) => hoverBlendAt(x) > 0.01;
     const clickRadiusAt = (x: number) => lerp(CLICK_MIN, CLICK_MAX, edgeInfluence(x));
     const interactionScaleAt = (x: number) => lerp(0.5, 1, edgeInfluence(x));
     const clickStrengthAt = (x: number) => lerp(0.88, 1, edgeInfluence(x));
-    const hoverEnabledAt = (x: number) => edgeInfluence(x) > 0.28;
 
     const pulseResponse = (x: number, y: number, now: number) => {
       let offsetX = 0;
@@ -116,11 +118,12 @@ export default function EdgeLattice() {
       let hoverEnergy = 0;
       let hoverOffsetX = 0;
       let hoverOffsetY = 0;
-      if (interactive && pointer.active && hoverEnabledAt(pointer.x)) {
+      if (interactive && pointer.active && hoverActiveAt(pointer.x)) {
         const radius = hoverRadiusAt(pointer.x);
+        const hoverStrength = hoverStrengthAt(pointer.x);
         const distance = Math.hypot(pointer.x - baseX, pointer.y - baseY);
         const influence = Math.max(0, 1 - distance / radius);
-        hoverEnergy = influence * influence * (3 - 2 * influence);
+        hoverEnergy = influence * influence * (3 - 2 * influence) * hoverStrength;
         const localScale = interactionScaleAt(baseX);
         hoverOffsetX = distance > 0.5 ? ((baseX - pointer.x) / distance) * hoverEnergy * 13 * localScale : 0;
         hoverOffsetY = distance > 0.5 ? ((baseY - pointer.y) / distance) * hoverEnergy * 13 * localScale : 0;
@@ -268,7 +271,7 @@ export default function EdgeLattice() {
 
     const currentDirty = () => {
       let dirty: Rect | null =
-        pointer.active && hoverEnabledAt(pointer.x)
+        pointer.active && hoverActiveAt(pointer.x)
           ? rectFor(pointer.x, pointer.y, hoverRadiusAt(pointer.x), 24)
           : null;
       for (const pulse of pulses) dirty = union(dirty, rectFor(pulse.x, pulse.y, pulse.radius, 38));
@@ -278,7 +281,7 @@ export default function EdgeLattice() {
     const clipInteractionAreas = (ctx: CanvasRenderingContext2D) => {
       let hasArea = false;
       ctx.beginPath();
-      if (pointer.active && hoverEnabledAt(pointer.x)) {
+      if (pointer.active && hoverActiveAt(pointer.x)) {
         ctx.arc(pointer.x, pointer.y, hoverRadiusAt(pointer.x) + 10, 0, Math.PI * 2);
         hasArea = true;
       }
@@ -318,7 +321,7 @@ export default function EdgeLattice() {
 
       const nextX = event.pageX;
       const nextY = event.pageY;
-      const nextHoverActive = hoverEnabledAt(nextX);
+      const nextHoverActive = hoverActiveAt(nextX);
       const hoverStateChanged = pointer.active !== nextHoverActive;
 
       pointer.x = nextX;
