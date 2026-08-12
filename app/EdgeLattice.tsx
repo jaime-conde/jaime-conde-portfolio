@@ -2,61 +2,39 @@
 
 import { useEffect, useRef } from "react";
 
-type LoadPulse = {
-  x: number;
-  y: number;
-  startedAt: number;
-  radius: number;
-  strength: number;
-};
-
-type FieldPoint = {
-  x: number;
-  y: number;
-  hoverEnergy: number;
-  loadEnergy: number;
-};
+type LoadPulse = { x: number; y: number; startedAt: number; radius: number; strength: number };
+type FieldPoint = { x: number; y: number; hoverEnergy: number; loadEnergy: number };
+type Rect = { x: number; y: number; w: number; h: number };
 
 const MIN_WIDTH = 820;
 const GRID_SPACING = 31;
 const DEPTH_LAYERS = 3;
-const POINTER_RADIUS = 230;
-const FRAME_INTERVAL = 1000 / 30;
-const PULSE_DURATION = 1450;
-const MAX_PULSES = 4;
+const PULSE_DURATION = 1200;
+const MAX_PULSES = 3;
+const HOVER_MIN = 72;
+const HOVER_MAX = 220;
+const CLICK_MIN = 88;
+const CLICK_MAX = 190;
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const smoothstep = (edge0: number, edge1: number, value: number) => {
   const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
 };
-
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const hash = (row: number, column: number, type: number, layer: number) => {
-  const value = Math.sin(
-    row * 12.9898 + column * 78.233 + type * 37.719 + layer * 19.193,
-  ) * 43758.5453;
+  const value = Math.sin(row * 12.9898 + column * 78.233 + type * 37.719 + layer * 19.193) * 43758.5453;
   return value - Math.floor(value);
 };
-
 const contourColor = (intensity: number, alpha: number) => {
-  const stops = [
-    [64, 139, 255],
-    [56, 224, 232],
-    [73, 224, 151],
-    [255, 216, 74],
-    [255, 86, 72],
-  ];
+  const stops = [[64,139,255],[56,224,232],[73,224,151],[255,216,74],[255,86,72]];
   const scaled = Math.min(0.999, intensity) * (stops.length - 1);
   const index = Math.floor(scaled);
   const mix = scaled - index;
   const from = stops[index];
   const to = stops[Math.min(index + 1, stops.length - 1)];
-  const channel = (position: number) =>
-    Math.round(from[position] + (to[position] - from[position]) * mix);
-
-  return `rgba(${channel(0)}, ${channel(1)}, ${channel(2)}, ${alpha})`;
+  const c = (i: number) => Math.round(from[i] + (to[i] - from[i]) * mix);
+  return `rgba(${c(0)}, ${c(1)}, ${c(2)}, ${alpha})`;
 };
 
 export default function EdgeLattice() {
@@ -70,228 +48,249 @@ export default function EdgeLattice() {
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const wideEnough = window.matchMedia(`(min-width: ${MIN_WIDTH}px)`);
+    const baseCanvas = document.createElement("canvas");
+    const baseCtx = baseCanvas.getContext("2d");
+    if (!baseCtx) return;
+
     const pointer = { x: -1000, y: -1000, active: false };
     const pulses: LoadPulse[] = [];
-
     let width = 0;
     let height = 0;
     let pixelRatio = 1;
     let frame = 0;
-    let lastRendered = -FRAME_INTERVAL;
     let resizeTimer = 0;
+    let hoverTimer = 0;
+    let lastDirty: Rect | null = null;
 
     document.body.classList.add("unified-field-active");
 
-    const documentHeight = () =>
-      Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-        document.documentElement.clientHeight,
-        window.innerHeight,
-      );
-
+    const documentHeight = () => Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight,
+      document.documentElement.clientHeight,
+      window.innerHeight,
+    );
     const edgeBand = () => Math.min(470, Math.max(300, width * 0.27));
-
     const connectionStrength = (x: number) => {
       const distanceToEdge = Math.min(x, width - x);
       return 1 - smoothstep(edgeBand() * 0.12, edgeBand(), distanceToEdge);
     };
-
-    const resize = () => {
-      width = document.documentElement.clientWidth;
-      height = documentHeight();
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.15);
-      canvas.width = Math.max(1, Math.round(width * pixelRatio));
-      canvas.height = Math.max(1, Math.round(height * pixelRatio));
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    const edgeInfluence = (x: number) => {
+      const distanceToEdge = Math.min(x, width - x);
+      return 1 - smoothstep(width * 0.12, width * 0.46, distanceToEdge);
     };
+    const hoverRadiusAt = (x: number) => lerp(HOVER_MIN, HOVER_MAX, edgeInfluence(x));
+    const clickRadiusAt = (x: number) => lerp(CLICK_MIN, CLICK_MAX, edgeInfluence(x));
+    const interactionScaleAt = (x: number) => lerp(0.5, 1, edgeInfluence(x));
 
     const pulseResponse = (x: number, y: number, now: number) => {
       let offsetX = 0;
       let offsetY = 0;
       let peakIntensity = 0;
-
       for (const pulse of pulses) {
         const age = (now - pulse.startedAt) / PULSE_DURATION;
         if (age < 0 || age > 1) continue;
-
         const dx = x - pulse.x;
         const dy = y - pulse.y;
         const distance = Math.hypot(dx, dy);
         if (distance > pulse.radius) continue;
-
-        const normalizedDistance = distance / pulse.radius;
-        const spatialFalloff = Math.pow(1 - normalizedDistance, 2);
-        const elasticEnvelope = Math.sin(Math.PI * age) * Math.exp(-1.35 * age);
-        const response = spatialFalloff * elasticEnvelope * pulse.strength;
+        const spatial = Math.pow(1 - distance / pulse.radius, 2);
+        const envelope = Math.sin(Math.PI * age) * Math.exp(-1.45 * age);
+        const response = spatial * envelope * pulse.strength;
         const directionX = distance > 0.5 ? dx / distance : 0;
         const directionY = distance > 0.5 ? dy / distance : 0;
-
-        offsetX += directionX * response * 25;
-        offsetY += directionY * response * 25;
-        peakIntensity = Math.max(peakIntensity, Math.min(1, response * 1.55));
+        const localScale = interactionScaleAt(x);
+        offsetX += directionX * response * 22 * localScale;
+        offsetY += directionY * response * 22 * localScale;
+        peakIntensity = Math.max(peakIntensity, Math.min(1, response * 1.5));
       }
-
       return { offsetX, offsetY, peakIntensity };
     };
 
-    const pointAt = (
-      row: number,
-      column: number,
-      layer: number,
-      now: number,
-    ): FieldPoint => {
+    const pointAt = (row: number, column: number, layer: number, now: number, interactive: boolean): FieldPoint => {
       const depth = layer / Math.max(1, DEPTH_LAYERS - 1);
       const baseX = GRID_SPACING / 2 + column * GRID_SPACING + depth * 8;
       const baseY = GRID_SPACING / 2 + row * GRID_SPACING - depth * 6;
-      const distance = Math.hypot(pointer.x - baseX, pointer.y - baseY);
-      const influence = pointer.active
-        ? Math.max(0, 1 - distance / POINTER_RADIUS)
-        : 0;
-      const hoverEnergy = influence * influence * (3 - 2 * influence);
-      const hoverDirectionX = distance > 0.5 ? (baseX - pointer.x) / distance : 0;
-      const hoverDirectionY = distance > 0.5 ? (baseY - pointer.y) / distance : 0;
-      const load = pulseResponse(baseX, baseY, now);
-
+      let hoverEnergy = 0;
+      let hoverOffsetX = 0;
+      let hoverOffsetY = 0;
+      if (interactive && pointer.active) {
+        const radius = hoverRadiusAt(pointer.x);
+        const distance = Math.hypot(pointer.x - baseX, pointer.y - baseY);
+        const influence = Math.max(0, 1 - distance / radius);
+        hoverEnergy = influence * influence * (3 - 2 * influence);
+        const localScale = interactionScaleAt(baseX);
+        hoverOffsetX = distance > 0.5 ? ((baseX - pointer.x) / distance) * hoverEnergy * 13 * localScale : 0;
+        hoverOffsetY = distance > 0.5 ? ((baseY - pointer.y) / distance) * hoverEnergy * 13 * localScale : 0;
+      }
+      const load = interactive ? pulseResponse(baseX, baseY, now) : { offsetX: 0, offsetY: 0, peakIntensity: 0 };
       return {
-        x: baseX + hoverDirectionX * hoverEnergy * 16 + load.offsetX,
-        y: baseY + hoverDirectionY * hoverEnergy * 16 + load.offsetY,
+        x: baseX + hoverOffsetX + load.offsetX,
+        y: baseY + hoverOffsetY + load.offsetY,
         hoverEnergy,
         loadEnergy: load.peakIntensity,
       };
     };
 
     const drawConnection = (
+      ctx: CanvasRenderingContext2D,
       from: FieldPoint,
       to: FieldPoint,
       strength: number,
       layer: number,
       diagonal: boolean,
+      interactive: boolean,
     ) => {
-      const hoverEnergy = Math.max(from.hoverEnergy, to.hoverEnergy);
-      const loadEnergy = Math.max(from.loadEnergy, to.loadEnergy);
+      const hoverEnergy = interactive ? Math.max(from.hoverEnergy, to.hoverEnergy) : 0;
+      const loadEnergy = interactive ? Math.max(from.loadEnergy, to.loadEnergy) : 0;
       const layerFade = 1 - layer * 0.26;
       const baseAlpha = (diagonal ? 0.055 : 0.085) * strength * layerFade;
-
-      context.beginPath();
-      context.moveTo(from.x, from.y);
-      context.lineTo(to.x, to.y);
-      context.strokeStyle =
-        loadEnergy > 0.015
-          ? contourColor(loadEnergy, (0.22 + loadEnergy * 0.58) * strength * layerFade)
-          : hoverEnergy > 0.015
-            ? `rgba(102, 226, 255, ${(0.11 + hoverEnergy * 0.32) * strength * layerFade})`
-            : `rgba(105, 174, 207, ${baseAlpha})`;
-      context.lineWidth =
-        (diagonal ? 0.48 : 0.66) + hoverEnergy * 0.85 + loadEnergy * 1.1;
-      context.stroke();
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.strokeStyle = loadEnergy > 0.015
+        ? contourColor(loadEnergy, (0.2 + loadEnergy * 0.55) * strength * layerFade)
+        : hoverEnergy > 0.015
+          ? `rgba(102, 226, 255, ${(0.09 + hoverEnergy * 0.28) * strength * layerFade})`
+          : `rgba(105, 174, 207, ${baseAlpha})`;
+      ctx.lineWidth = (diagonal ? 0.48 : 0.66) + hoverEnergy * 0.7 + loadEnergy;
+      ctx.stroke();
     };
 
-    const draw = (now: number) => {
-      if (now - lastRendered < FRAME_INTERVAL) {
-        frame = window.requestAnimationFrame(draw);
-        return;
-      }
-      lastRendered = now;
-      context.clearRect(0, 0, width, height);
-
-      const rows = Math.ceil(height / GRID_SPACING) + 1;
+    const drawRegion = (
+      ctx: CanvasRenderingContext2D,
+      minY: number,
+      maxY: number,
+      now: number,
+      interactive: boolean,
+    ) => {
+      const startRow = Math.max(0, Math.floor((minY - GRID_SPACING * 2) / GRID_SPACING));
+      const endRow = Math.min(Math.ceil(height / GRID_SPACING) + 1, Math.ceil((maxY + GRID_SPACING * 2) / GRID_SPACING));
       const columns = Math.ceil(width / GRID_SPACING) + 1;
 
       if (wideEnough.matches) {
         for (let layer = DEPTH_LAYERS - 1; layer >= 0; layer -= 1) {
           const points: FieldPoint[][] = [];
-          for (let row = 0; row < rows; row += 1) {
+          for (let row = startRow; row <= endRow; row += 1) {
             const rowPoints: FieldPoint[] = [];
-            for (let column = 0; column < columns; column += 1) {
-              rowPoints.push(pointAt(row, column, layer, now));
-            }
+            for (let column = 0; column < columns; column += 1) rowPoints.push(pointAt(row, column, layer, now, interactive));
             points.push(rowPoints);
           }
-
-          for (let row = 0; row < rows; row += 1) {
+          for (let localRow = 0; localRow < points.length; localRow += 1) {
+            const row = startRow + localRow;
             for (let column = 0; column < columns; column += 1) {
-              const point = points[row][column];
+              const point = points[localRow][column];
               const strength = connectionStrength(point.x);
               if (strength <= 0.015) continue;
-
               const probability = Math.pow(strength, 1.25);
               const layerPenalty = layer * 0.09;
-
-              if (
-                column + 1 < columns &&
-                hash(row, column, 0, layer) < probability - layerPenalty
-              ) {
-                drawConnection(point, points[row][column + 1], strength, layer, false);
-              }
-
-              if (
-                row + 1 < rows &&
-                hash(row, column, 1, layer) < probability * 0.92 - layerPenalty
-              ) {
-                drawConnection(point, points[row + 1][column], strength, layer, false);
-              }
-
-              if (
-                row + 1 < rows &&
-                column + 1 < columns &&
-                hash(row, column, 2, layer) < probability * 0.72 - layerPenalty
-              ) {
-                const target = (row + column + layer) % 2 === 0
-                  ? points[row + 1][column + 1]
-                  : points[row + 1][column];
-                drawConnection(point, target, strength, layer, true);
+              if (column + 1 < columns && hash(row, column, 0, layer) < probability - layerPenalty)
+                drawConnection(ctx, point, points[localRow][column + 1], strength, layer, false, interactive);
+              if (localRow + 1 < points.length && hash(row, column, 1, layer) < probability * 0.92 - layerPenalty)
+                drawConnection(ctx, point, points[localRow + 1][column], strength, layer, false, interactive);
+              if (localRow + 1 < points.length && column + 1 < columns && hash(row, column, 2, layer) < probability * 0.72 - layerPenalty) {
+                const target = (row + column + layer) % 2 === 0 ? points[localRow + 1][column + 1] : points[localRow + 1][column];
+                drawConnection(ctx, point, target, strength, layer, true, interactive);
               }
             }
           }
         }
       }
 
-      for (let row = 0; row < rows; row += 1) {
+      for (let row = startRow; row <= endRow; row += 1) {
         for (let column = 0; column < columns; column += 1) {
-          const point = pointAt(row, column, 0, now);
+          const point = pointAt(row, column, 0, now, interactive);
           const strength = connectionStrength(point.x);
           const dotBlend = 1 - strength;
-          const dotRadius =
-            0.58 + point.hoverEnergy * 1.7 + point.loadEnergy * 2.35 + strength * 0.18;
+          const dotRadius = 0.58 + point.hoverEnergy * 1.25 + point.loadEnergy * 2 + strength * 0.18;
           const idleAlpha = 0.16 + dotBlend * 0.05;
-
-          context.beginPath();
-          context.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
-          context.fillStyle =
-            point.loadEnergy > 0.015
-              ? contourColor(point.loadEnergy, 0.36 + point.loadEnergy * 0.54)
-              : point.hoverEnergy > 0.015
-                ? `rgba(151, 238, 255, ${0.26 + point.hoverEnergy * 0.5})`
-                : `rgba(175, 222, 255, ${idleAlpha})`;
-          context.fill();
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+          ctx.fillStyle = point.loadEnergy > 0.015
+            ? contourColor(point.loadEnergy, 0.34 + point.loadEnergy * 0.5)
+            : point.hoverEnergy > 0.015
+              ? `rgba(151, 238, 255, ${0.22 + point.hoverEnergy * 0.42})`
+              : `rgba(175, 222, 255, ${idleAlpha})`;
+          ctx.fill();
         }
       }
+    };
 
-      for (const pulse of pulses) {
-        const age = (now - pulse.startedAt) / PULSE_DURATION;
-        if (age < 0 || age > 1) continue;
-        const progress = 1 - Math.pow(1 - age, 2);
+    const buildBase = () => {
+      baseCtx.clearRect(0, 0, width, height);
+      drawRegion(baseCtx, 0, height, 0, false);
+      context.clearRect(0, 0, width, height);
+      context.drawImage(baseCanvas, 0, 0, width, height);
+      lastDirty = null;
+    };
+
+    const sizeCanvases = () => {
+      width = document.documentElement.clientWidth;
+      height = documentHeight();
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.05);
+      for (const target of [canvas, baseCanvas]) {
+        target.width = Math.max(1, Math.round(width * pixelRatio));
+        target.height = Math.max(1, Math.round(height * pixelRatio));
+      }
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      baseCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      buildBase();
+    };
+
+    const rectFor = (x: number, y: number, radius: number): Rect => ({
+      x: Math.max(0, x - radius - 50),
+      y: Math.max(0, y - radius - 50),
+      w: Math.min(width, radius * 2 + 100),
+      h: Math.min(height, radius * 2 + 100),
+    });
+    const union = (a: Rect | null, b: Rect | null): Rect | null => {
+      if (!a) return b;
+      if (!b) return a;
+      const x = Math.min(a.x, b.x);
+      const y = Math.min(a.y, b.y);
+      const right = Math.max(a.x + a.w, b.x + b.w);
+      const bottom = Math.max(a.y + a.h, b.y + b.h);
+      return { x, y, w: right - x, h: bottom - y };
+    };
+    const restoreRect = (rect: Rect | null) => {
+      if (!rect) return;
+      context.clearRect(rect.x, rect.y, rect.w, rect.h);
+      context.drawImage(
+        baseCanvas,
+        rect.x * pixelRatio, rect.y * pixelRatio, rect.w * pixelRatio, rect.h * pixelRatio,
+        rect.x, rect.y, rect.w, rect.h,
+      );
+    };
+
+    const currentDirty = () => {
+      let dirty: Rect | null = pointer.active ? rectFor(pointer.x, pointer.y, hoverRadiusAt(pointer.x)) : null;
+      for (const pulse of pulses) dirty = union(dirty, rectFor(pulse.x, pulse.y, pulse.radius));
+      return dirty;
+    };
+
+    const renderInteraction = (now = performance.now()) => {
+      frame = 0;
+      for (let i = pulses.length - 1; i >= 0; i -= 1) {
+        if (now - pulses[i].startedAt > PULSE_DURATION) pulses.splice(i, 1);
+      }
+      const nextDirty = currentDirty();
+      const repaint = union(lastDirty, nextDirty);
+      restoreRect(repaint);
+      if (nextDirty) {
+        context.save();
         context.beginPath();
-        context.arc(
-          pulse.x,
-          pulse.y,
-          12 + pulse.radius * 0.25 * progress,
-          0,
-          Math.PI * 2,
-        );
-        context.strokeStyle = `rgba(81, 220, 255, ${0.18 * (1 - age)})`;
-        context.lineWidth = 1;
-        context.stroke();
+        context.rect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
+        context.clip();
+        drawRegion(context, nextDirty.y, nextDirty.y + nextDirty.h, now, true);
+        context.restore();
       }
-
-      for (let index = pulses.length - 1; index >= 0; index -= 1) {
-        if (now - pulses[index].startedAt > PULSE_DURATION) pulses.splice(index, 1);
-      }
-
-      if (!reducedMotion.matches) frame = window.requestAnimationFrame(draw);
+      lastDirty = nextDirty;
+      if (!reducedMotion.matches && pulses.length > 0) frame = window.requestAnimationFrame(renderInteraction);
+    };
+    const requestInteraction = () => {
+      if (!frame) frame = window.requestAnimationFrame(renderInteraction);
     };
 
     const move = (event: PointerEvent) => {
@@ -299,52 +298,43 @@ export default function EdgeLattice() {
       pointer.x = event.pageX;
       pointer.y = event.pageY;
       pointer.active = true;
+      const now = performance.now();
+      if (now - hoverTimer > 42) {
+        hoverTimer = now;
+        requestInteraction();
+      }
     };
-
+    const leave = () => {
+      pointer.active = false;
+      requestInteraction();
+    };
     const applyLoad = (event: PointerEvent) => {
       if (event.button !== 0 || reducedMotion.matches) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("a, button, input, textarea, select, summary, [role='button']")) return;
-
-      const responsiveRadius = Math.min(190, Math.max(125, window.innerWidth * 0.16));
-      pulses.push({
-        x: event.pageX,
-        y: event.pageY,
-        startedAt: performance.now(),
-        radius: responsiveRadius,
-        strength: 1,
-      });
+      const x = event.pageX;
+      const radius = clickRadiusAt(x);
+      pulses.push({ x, y: event.pageY, startedAt: performance.now(), radius, strength: interactionScaleAt(x) });
       if (pulses.length > MAX_PULSES) pulses.shift();
+      requestInteraction();
     };
-
-    const leave = () => {
-      pointer.active = false;
-    };
-
     const scheduleResize = () => {
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(resize, 120);
+      resizeTimer = window.setTimeout(sizeCanvases, 140);
     };
 
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(scheduleResize)
-        : null;
-
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleResize) : null;
     resizeObserver?.observe(document.body);
-    resize();
+    sizeCanvases();
     window.addEventListener("resize", scheduleResize);
     window.visualViewport?.addEventListener("resize", scheduleResize);
     window.addEventListener("pointermove", move, { passive: true });
     window.addEventListener("pointerdown", applyLoad, { passive: true });
     document.documentElement.addEventListener("mouseleave", leave);
 
-    if (reducedMotion.matches) draw(performance.now());
-    else frame = window.requestAnimationFrame(draw);
-
     return () => {
       document.body.classList.remove("unified-field-active");
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
       window.clearTimeout(resizeTimer);
       resizeObserver?.disconnect();
       window.removeEventListener("resize", scheduleResize);
