@@ -45,14 +45,14 @@ export default function FeaBackground() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const pulses: LoadPulse[] = [];
     let frame = 0;
-    let width = window.innerWidth;
+    let width = document.documentElement.clientWidth;
     let height = window.innerHeight;
     let pixelRatio = 1;
 
     document.body.classList.add("fea-background-active");
 
     const resize = () => {
-      width = window.innerWidth;
+      width = document.documentElement.clientWidth;
       height = window.innerHeight;
       pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.round(width * pixelRatio);
@@ -138,6 +138,7 @@ export default function FeaBackground() {
 
     resize();
     window.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("resize", resize);
     window.addEventListener("pointerdown", applyLoad, { passive: true });
     frame = window.requestAnimationFrame(draw);
 
@@ -145,6 +146,7 @@ export default function FeaBackground() {
       document.body.classList.remove("fea-background-active");
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", applyLoad);
     };
   }, []);
