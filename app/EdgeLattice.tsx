@@ -6,15 +6,27 @@ type Point = { x: number; y: number };
 type Impulse = { x: number; y: number; t: number };
 type PointerState = { x: number; y: number; active: boolean };
 
+type Layer = {
+  phase: number;
+  offsetX: number;
+  offsetY: number;
+  alpha: number;
+  width: number;
+};
+
 const MIN_WIDTH = 820;
 const TOP_PAD = 52;
 const BOTTOM_PAD = 72;
-const LAYERS = [
-  { phase: 0.0, offsetX: 0, offsetY: 0, alpha: 1.0, width: 1.0 },
-  { phase: 1.25, offsetX: 7, offsetY: -5, alpha: 0.56, width: 0.82 },
-  { phase: 2.35, offsetX: 13, offsetY: -10, alpha: 0.32, width: 0.68 },
+const BASE_STEP = 28;
+const INTERACTION_RADIUS = 280;
+const CLICK_RADIUS = 360;
+const CLICK_DURATION = 900;
+const ISOS = [-0.54, 0.1, 0.66];
+const LAYERS: Layer[] = [
+  { phase: 0, offsetX: 0, offsetY: 0, alpha: 1, width: 1 },
+  { phase: 1.18, offsetX: 6, offsetY: -4, alpha: 0.45, width: 0.82 },
+  { phase: 2.22, offsetX: 11, offsetY: -8, alpha: 0.24, width: 0.68 },
 ];
-const ISOS = [-0.52, 0.12, 0.68];
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -25,14 +37,17 @@ const smoothstep = (edge0: number, edge1: number, value: number) => {
 };
 
 export default function EdgeLattice() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const baseRef = useRef<HTMLCanvasElement>(null);
+  const interactionRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const baseCanvas = baseRef.current;
+    const interactionCanvas = interactionRef.current;
+    if (!baseCanvas || !interactionCanvas) return;
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    const base = baseCanvas.getContext("2d");
+    const overlay = interactionCanvas.getContext("2d");
+    if (!base || !overlay) return;
 
     const wideEnough = window.matchMedia(`(min-width: ${MIN_WIDTH}px)`);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -43,10 +58,10 @@ export default function EdgeLattice() {
     let height = 0;
     let pixelRatio = 1;
     let frame = 0;
-    let interactionUntil = 0;
-    let lastMoveDraw = 0;
+    let resizeTimer = 0;
+    let lastDirty: { x: number; y: number; w: number; h: number } | null = null;
 
-    const documentHeight = () =>
+    const pageHeight = () =>
       Math.max(
         document.documentElement.scrollHeight,
         document.body.scrollHeight,
@@ -54,72 +69,82 @@ export default function EdgeLattice() {
         window.innerHeight,
       );
 
-    const resize = () => {
+    const sizeCanvases = () => {
       width = document.documentElement.clientWidth;
-      height = documentHeight();
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.35);
-      canvas.width = Math.round(width * pixelRatio);
-      canvas.height = Math.round(height * pixelRatio);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      requestDraw();
+      height = pageHeight();
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.15);
+
+      for (const canvas of [baseCanvas, interactionCanvas]) {
+        canvas.width = Math.max(1, Math.round(width * pixelRatio));
+        canvas.height = Math.max(1, Math.round(height * pixelRatio));
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+      }
+
+      base.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      overlay.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      renderBase();
+      overlay.clearRect(0, 0, width, height);
+      lastDirty = null;
     };
 
-    const edgeBand = () => Math.min(520, Math.max(300, width * 0.34));
+    const edgeDistanceAt = (x: number) => Math.min(x, width - x);
+    const halfWidth = () => Math.max(1, width * 0.5);
 
-    const edgeWeightAt = (x: number) => {
-      const edgeDistance = Math.min(x, width - x);
-      const band = edgeBand();
-      return 1 - smoothstep(band * 0.32, band, edgeDistance);
+    const transitionAt = (x: number) => {
+      const normalized = clamp(edgeDistanceAt(x) / halfWidth(), 0, 1);
+      return smoothstep(0.08, 0.94, normalized);
     };
 
-    const dotWeightAt = (x: number) => {
-      const edgeDistance = Math.min(x, width - x);
-      const band = edgeBand();
-      return smoothstep(band * 0.18, band * 0.92, edgeDistance);
+    const localScaleAt = (x: number) => {
+      const transition = transitionAt(x);
+      return 36 - transition * 27;
     };
 
-    const localInteraction = (x: number, y: number, now: number) => {
+    const interactionStrength = (x: number, y: number, now: number) => {
       let hover = 0;
       if (pointer.active) {
         const distance = Math.hypot(pointer.x - x, pointer.y - y);
-        hover = smoothstep(250, 0, distance);
+        hover = 1 - smoothstep(0, INTERACTION_RADIUS, distance);
       }
 
       let click = 0;
       for (const impulse of impulses) {
         const age = now - impulse.t;
-        if (age > 1200) continue;
+        if (age > CLICK_DURATION) continue;
         const distance = Math.hypot(impulse.x - x, impulse.y - y);
-        const radial = Math.exp(-distance * 0.0085);
-        const temporal = Math.exp(-age * 0.0032);
-        click += radial * temporal;
+        const spatial = 1 - smoothstep(0, CLICK_RADIUS, distance);
+        const temporal = 1 - smoothstep(0, CLICK_DURATION, age);
+        click = Math.max(click, spatial * temporal);
       }
 
-      return { hover, click: clamp(click, 0, 1.5) };
+      return { hover, click };
     };
 
-    const gyroidField = (
+    const gyroid = (
       x: number,
       y: number,
       phase: number,
-      now: number,
+      now = 0,
+      interactive = false,
     ) => {
-      const interaction = localInteraction(x, y, now);
-      const edge = edgeWeightAt(x);
-      const baseFrequency = 0.0154 + edge * 0.0062;
-      const frequency =
-        baseFrequency *
-        (1 + interaction.hover * 0.42 + interaction.click * 0.95);
+      const scale = localScaleAt(x);
+      const baseFrequency = Math.PI * 2 / Math.max(6, scale * 2.6);
+      const interaction = interactive
+        ? interactionStrength(x, y, now)
+        : { hover: 0, click: 0 };
 
-      const sx = x * frequency + phase + interaction.click * 1.7;
-      const sy = y * frequency * 0.93 - phase * 0.62 - interaction.hover * 0.45;
+      const frequency =
+        baseFrequency * (1 + interaction.hover * 0.52 + interaction.click * 1.35);
+      const phaseShift = interaction.click * 2.2;
+
+      const sx = x * frequency + phase + phaseShift;
+      const sy = y * frequency * 0.94 - phase * 0.58 - interaction.hover * 0.34;
       const sz =
-        x * frequency * 0.58 -
-        y * frequency * 0.34 +
-        phase * 1.15 +
-        interaction.click * 2.45;
+        x * frequency * 0.5 -
+        y * frequency * 0.31 +
+        phase * 1.08 +
+        interaction.click * 2.8;
 
       return (
         Math.sin(sx) * Math.cos(sy) +
@@ -143,11 +168,11 @@ export default function EdgeLattice() {
       };
     };
 
-    const drawContourCell = (
+    const contourSegments = (
       corners: [Point, Point, Point, Point],
       values: [number, number, number, number],
       iso: number,
-    ) => {
+    ): [Point, Point][] => {
       const [topLeft, topRight, bottomRight, bottomLeft] = corners;
       const [v0, v1, v2, v3] = values;
       const intersections: { edge: string; point: Point }[] = [];
@@ -166,159 +191,231 @@ export default function EdgeLattice() {
       }
 
       if (intersections.length === 2) {
-        context.beginPath();
-        context.moveTo(intersections[0].point.x, intersections[0].point.y);
-        context.lineTo(intersections[1].point.x, intersections[1].point.y);
-        context.stroke();
-      } else if (intersections.length === 4) {
+        return [[intersections[0].point, intersections[1].point]];
+      }
+
+      if (intersections.length === 4) {
         const center = (v0 + v1 + v2 + v3) * 0.25;
         const top = intersections.find((entry) => entry.edge === "top")?.point;
         const right = intersections.find((entry) => entry.edge === "right")?.point;
         const bottom = intersections.find((entry) => entry.edge === "bottom")?.point;
         const left = intersections.find((entry) => entry.edge === "left")?.point;
-        if (!top || !right || !bottom || !left) return;
-
-        const pairs: [Point, Point][] = center >= iso
+        if (!top || !right || !bottom || !left) return [];
+        return center >= iso
           ? [[top, left], [right, bottom]]
           : [[top, right], [bottom, left]];
-
-        for (const [start, end] of pairs) {
-          context.beginPath();
-          context.moveTo(start.x, start.y);
-          context.lineTo(end.x, end.y);
-          context.stroke();
-        }
       }
+
+      return [];
     };
 
-    const drawStackedGyroid = (now: number) => {
-      const step = width > 1500 ? 24 : 26;
-      const yStart = TOP_PAD;
-      const yEnd = Math.max(yStart + 160, height - BOTTOM_PAD);
+    const drawShrinkingSegment = (
+      context: CanvasRenderingContext2D,
+      start: Point,
+      end: Point,
+      transition: number,
+      alpha: number,
+      lineWidth: number,
+    ) => {
+      const midpoint = {
+        x: (start.x + end.x) * 0.5,
+        y: (start.y + end.y) * 0.5,
+      };
+      const segmentScale = Math.pow(1 - transition, 1.45);
 
-      for (const layer of LAYERS) {
-        for (let y = yStart; y < yEnd; y += step) {
-          for (let x = 0; x < width; x += step) {
-            const centerX = x + step * 0.5;
-            const edgeBlend = edgeWeightAt(centerX);
-            if (edgeBlend < 0.018) continue;
+      if (segmentScale < 0.16) {
+        const radius = 0.42 + (1 - transition) * 0.52;
+        context.beginPath();
+        context.arc(midpoint.x, midpoint.y, radius, 0, Math.PI * 2);
+        context.fillStyle = `rgba(158, 226, 255, ${alpha * (0.48 + transition * 0.4)})`;
+        context.fill();
+        return;
+      }
 
-            const local = localInteraction(centerX, y + step * 0.5, now);
-            const transitionDots = dotWeightAt(centerX);
-            const contourAlpha =
-              (0.035 + edgeBlend * 0.15) *
-              layer.alpha *
-              (1 - transitionDots * 0.42) *
-              (1 + local.hover * 0.48 + local.click * 0.72);
+      const shrunkStart = {
+        x: midpoint.x + (start.x - midpoint.x) * segmentScale,
+        y: midpoint.y + (start.y - midpoint.y) * segmentScale,
+      };
+      const shrunkEnd = {
+        x: midpoint.x + (end.x - midpoint.x) * segmentScale,
+        y: midpoint.y + (end.y - midpoint.y) * segmentScale,
+      };
 
+      context.beginPath();
+      context.moveTo(shrunkStart.x, shrunkStart.y);
+      context.lineTo(shrunkEnd.x, shrunkEnd.y);
+      context.strokeStyle = `rgba(119, 222, 248, ${alpha})`;
+      context.lineWidth = lineWidth * (0.55 + segmentScale * 0.45);
+      context.stroke();
+    };
+
+    const drawFieldRegion = (
+      context: CanvasRenderingContext2D,
+      minX: number,
+      minY: number,
+      maxX: number,
+      maxY: number,
+      now = 0,
+      interactive = false,
+    ) => {
+      if (!wideEnough.matches) return;
+
+      const yStart = Math.max(TOP_PAD, minY);
+      const yEnd = Math.min(Math.max(TOP_PAD + 160, height - BOTTOM_PAD), maxY);
+      const xStart = Math.max(0, minX);
+      const xEnd = Math.min(width, maxX);
+
+      for (let y = yStart; y < yEnd; y += BASE_STEP) {
+        for (let x = xStart; x < xEnd; x += BASE_STEP) {
+          const centerX = x + BASE_STEP * 0.5;
+          const transition = transitionAt(centerX);
+          const activeLayers = transition > 0.58 ? 1 : transition > 0.34 ? 2 : 3;
+          const activeIsos = transition > 0.7 ? [0.1] : ISOS;
+
+          for (let layerIndex = 0; layerIndex < activeLayers; layerIndex += 1) {
+            const layer = LAYERS[layerIndex];
             const topLeft = { x: x + layer.offsetX, y: y + layer.offsetY };
-            const topRight = { x: Math.min(x + step, width) + layer.offsetX, y: y + layer.offsetY };
+            const topRight = {
+              x: Math.min(x + BASE_STEP, width) + layer.offsetX,
+              y: y + layer.offsetY,
+            };
             const bottomRight = {
-              x: Math.min(x + step, width) + layer.offsetX,
-              y: Math.min(y + step, yEnd) + layer.offsetY,
+              x: Math.min(x + BASE_STEP, width) + layer.offsetX,
+              y: Math.min(y + BASE_STEP, yEnd) + layer.offsetY,
             };
             const bottomLeft = {
               x: x + layer.offsetX,
-              y: Math.min(y + step, yEnd) + layer.offsetY,
+              y: Math.min(y + BASE_STEP, yEnd) + layer.offsetY,
             };
 
             const values: [number, number, number, number] = [
-              gyroidField(topLeft.x, topLeft.y, layer.phase, now),
-              gyroidField(topRight.x, topRight.y, layer.phase, now),
-              gyroidField(bottomRight.x, bottomRight.y, layer.phase, now),
-              gyroidField(bottomLeft.x, bottomLeft.y, layer.phase, now),
+              gyroid(topLeft.x, topLeft.y, layer.phase, now, interactive),
+              gyroid(topRight.x, topRight.y, layer.phase, now, interactive),
+              gyroid(bottomRight.x, bottomRight.y, layer.phase, now, interactive),
+              gyroid(bottomLeft.x, bottomLeft.y, layer.phase, now, interactive),
             ];
 
-            for (const iso of ISOS) {
+            const interaction = interactive
+              ? interactionStrength(centerX, y + BASE_STEP * 0.5, now)
+              : { hover: 0, click: 0 };
+            const edgePresence = 1 - transition * 0.72;
+            const interactionBoost = 1 + interaction.hover * 0.5 + interaction.click * 1.15;
+
+            for (const iso of activeIsos) {
               const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
-              context.strokeStyle = `rgba(119, 222, 248, ${contourAlpha * (0.62 + isoWeight * 0.38)})`;
-              context.lineWidth =
-                (0.7 + isoWeight * 0.9 + edgeBlend * 1.15) * layer.width;
-              drawContourCell([topLeft, topRight, bottomRight, bottomLeft], values, iso);
+              const alpha =
+                (0.045 + edgePresence * 0.13) *
+                layer.alpha *
+                (0.7 + isoWeight * 0.3) *
+                interactionBoost;
+              const lineWidth =
+                (0.75 + edgePresence * 1.35 + isoWeight * 0.5) * layer.width;
+
+              for (const [start, end] of contourSegments(
+                [topLeft, topRight, bottomRight, bottomLeft],
+                values,
+                iso,
+              )) {
+                drawShrinkingSegment(context, start, end, transition, alpha, lineWidth);
+              }
             }
           }
         }
       }
     };
 
-    const drawDots = (now: number) => {
-      const gap = width > 1500 ? 58 : 54;
-      const yStart = TOP_PAD;
-      const yEnd = Math.max(yStart + 160, height - BOTTOM_PAD);
-
-      for (let y = yStart; y < yEnd; y += gap) {
-        const rowOffset = (Math.floor(y / gap) % 2) * gap * 0.5;
-        for (let x = rowOffset; x < width; x += gap) {
-          const dotBlend = dotWeightAt(x);
-          if (dotBlend < 0.04) continue;
-
-          const edgeBlend = edgeWeightAt(x);
-          const local = localInteraction(x, y, now);
-          const gyroidSample = Math.abs(gyroidField(x, y, 0.4, now));
-          const transitionMod = 0.72 + (1 - Math.min(1, gyroidSample)) * 0.52;
-
-          const radius =
-            0.5 +
-            dotBlend * 0.82 +
-            edgeBlend * 0.35 +
-            local.hover * 0.6 +
-            local.click * 2.35;
-
-          const alpha =
-            (0.035 + dotBlend * 0.09 + edgeBlend * 0.045) *
-            transitionMod +
-            local.click * 0.09;
-
-          context.beginPath();
-          context.arc(x, y, radius, 0, Math.PI * 2);
-          context.fillStyle = `rgba(160, 225, 255, ${Math.min(0.32, alpha)})`;
-          context.fill();
-        }
-      }
-    };
-
-    const pruneImpulses = (now: number) => {
-      for (let i = impulses.length - 1; i >= 0; i -= 1) {
-        if (now - impulses[i].t > 1200) impulses.splice(i, 1);
-      }
-    };
-
-    const render = (now = performance.now()) => {
-      frame = 0;
-      pruneImpulses(now);
-      context.clearRect(0, 0, width, height);
-      if (!wideEnough.matches) return;
-
-      drawStackedGyroid(now);
-      drawDots(now);
-
-      if (!reducedMotion.matches && (impulses.length > 0 || now < interactionUntil)) {
-        frame = window.requestAnimationFrame(render);
-      }
-    };
-
-    function requestDraw() {
-      if (frame) return;
-      frame = window.requestAnimationFrame(render);
+    function renderBase() {
+      base.clearRect(0, 0, width, height);
+      drawFieldRegion(base, 0, 0, width, height, 0, false);
     }
+
+    const dirtyRectFor = (x: number, y: number, radius: number) => ({
+      x: Math.max(0, x - radius - 40),
+      y: Math.max(0, y - radius - 40),
+      w: Math.min(width, radius * 2 + 80),
+      h: Math.min(height, radius * 2 + 80),
+    });
+
+    const clearDirty = (rect: { x: number; y: number; w: number; h: number } | null) => {
+      if (!rect) return;
+      overlay.clearRect(rect.x, rect.y, rect.w, rect.h);
+    };
+
+    const renderInteraction = (now = performance.now()) => {
+      frame = 0;
+
+      const activeImpulses = impulses.filter((impulse) => now - impulse.t < CLICK_DURATION);
+      impulses.splice(0, impulses.length, ...activeImpulses);
+
+      let centerX = pointer.x;
+      let centerY = pointer.y;
+      let radius = pointer.active ? INTERACTION_RADIUS : 0;
+
+      for (const impulse of impulses) {
+        centerX = impulse.x;
+        centerY = impulse.y;
+        radius = Math.max(radius, CLICK_RADIUS);
+      }
+
+      const nextDirty = radius > 0 ? dirtyRectFor(centerX, centerY, radius) : null;
+      clearDirty(lastDirty);
+      clearDirty(nextDirty);
+
+      if (nextDirty) {
+        overlay.save();
+        overlay.beginPath();
+        overlay.rect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
+        overlay.clip();
+
+        const gradient = overlay.createRadialGradient(
+          centerX,
+          centerY,
+          radius * 0.12,
+          centerX,
+          centerY,
+          radius,
+        );
+        gradient.addColorStop(0, "rgba(3, 8, 18, 0.42)");
+        gradient.addColorStop(0.7, "rgba(3, 8, 18, 0.18)");
+        gradient.addColorStop(1, "rgba(3, 8, 18, 0)");
+        overlay.fillStyle = gradient;
+        overlay.fillRect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
+
+        drawFieldRegion(
+          overlay,
+          nextDirty.x,
+          nextDirty.y,
+          nextDirty.x + nextDirty.w,
+          nextDirty.y + nextDirty.h,
+          now,
+          true,
+        );
+        overlay.restore();
+      }
+
+      lastDirty = nextDirty;
+
+      if (!reducedMotion.matches && impulses.length > 0) {
+        frame = window.requestAnimationFrame(renderInteraction);
+      }
+    };
+
+    const requestInteractionRender = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(renderInteraction);
+    };
 
     const move = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
       pointer.x = event.pageX;
       pointer.y = event.pageY;
       pointer.active = true;
-      interactionUntil = performance.now() + 90;
-
-      const now = performance.now();
-      if (now - lastMoveDraw > 34) {
-        lastMoveDraw = now;
-        requestDraw();
-      }
+      requestInteractionRender();
     };
 
     const leave = () => {
       pointer.active = false;
-      requestDraw();
+      requestInteractionRender();
     };
 
     const click = (event: PointerEvent) => {
@@ -326,29 +423,34 @@ export default function EdgeLattice() {
       if (target?.closest("a, button, input, textarea, select, summary, [role='button']")) return;
 
       impulses.push({ x: event.pageX, y: event.pageY, t: performance.now() });
-      if (impulses.length > 4) impulses.shift();
-      interactionUntil = performance.now() + 1200;
-      requestDraw();
+      if (impulses.length > 3) impulses.shift();
+      requestInteractionRender();
+    };
+
+    const scheduleResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(sizeCanvases, 120);
     };
 
     const resizeObserver = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(resize)
+      ? new ResizeObserver(scheduleResize)
       : null;
 
     resizeObserver?.observe(document.body);
-    window.addEventListener("resize", resize);
-    window.visualViewport?.addEventListener("resize", resize);
+    window.addEventListener("resize", scheduleResize);
+    window.visualViewport?.addEventListener("resize", scheduleResize);
     window.addEventListener("pointermove", move, { passive: true });
     window.addEventListener("pointerdown", click, { passive: true });
     document.documentElement.addEventListener("mouseleave", leave);
 
-    resize();
+    sizeCanvases();
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
+      window.clearTimeout(resizeTimer);
       resizeObserver?.disconnect();
-      window.removeEventListener("resize", resize);
-      window.visualViewport?.removeEventListener("resize", resize);
+      window.removeEventListener("resize", scheduleResize);
+      window.visualViewport?.removeEventListener("resize", scheduleResize);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerdown", click);
       document.documentElement.removeEventListener("mouseleave", leave);
@@ -358,27 +460,29 @@ export default function EdgeLattice() {
   return (
     <>
       <style>{`
-        .edge-lattice {
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: auto !important;
-          bottom: auto !important;
+        .edge-lattice-base,
+        .edge-lattice-interaction {
+          position: absolute;
+          top: 0;
+          left: 0;
           z-index: -1;
           display: block;
-          width: 100% !important;
+          width: 100%;
           height: auto;
           max-width: none !important;
           pointer-events: none;
-          opacity: .92;
           mask-image: none !important;
           -webkit-mask-image: none !important;
         }
+        .edge-lattice-base { opacity: .9; }
+        .edge-lattice-interaction { opacity: .98; }
         @media (max-width: 819px) {
-          .edge-lattice { display: none !important; }
+          .edge-lattice-base,
+          .edge-lattice-interaction { display: none; }
         }
       `}</style>
-      <canvas ref={canvasRef} className="edge-lattice" aria-hidden="true" />
+      <canvas ref={baseRef} className="edge-lattice-base" aria-hidden="true" />
+      <canvas ref={interactionRef} className="edge-lattice-interaction" aria-hidden="true" />
     </>
   );
 }
