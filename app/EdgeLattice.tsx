@@ -78,8 +78,17 @@ export default function EdgeLattice() {
     let pixelRatio = 1;
     let frame = 0;
     let lastRendered = -FRAME_INTERVAL;
+    let resizeTimer = 0;
 
     document.body.classList.add("unified-field-active");
+
+    const documentHeight = () =>
+      Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        document.documentElement.clientHeight,
+        window.innerHeight,
+      );
 
     const edgeBand = () => Math.min(470, Math.max(300, width * 0.27));
 
@@ -90,10 +99,10 @@ export default function EdgeLattice() {
 
     const resize = () => {
       width = document.documentElement.clientWidth;
-      height = window.innerHeight;
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.35);
-      canvas.width = Math.round(width * pixelRatio);
-      canvas.height = Math.round(height * pixelRatio);
+      height = documentHeight();
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.15);
+      canvas.width = Math.max(1, Math.round(width * pixelRatio));
+      canvas.height = Math.max(1, Math.round(height * pixelRatio));
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -287,8 +296,8 @@ export default function EdgeLattice() {
 
     const move = (event: PointerEvent) => {
       if (event.pointerType === "touch" || reducedMotion.matches) return;
-      pointer.x = event.clientX;
-      pointer.y = event.clientY;
+      pointer.x = event.pageX;
+      pointer.y = event.pageY;
       pointer.active = true;
     };
 
@@ -299,8 +308,8 @@ export default function EdgeLattice() {
 
       const responsiveRadius = Math.min(190, Math.max(125, window.innerWidth * 0.16));
       pulses.push({
-        x: event.clientX,
-        y: event.clientY,
+        x: event.pageX,
+        y: event.pageY,
         startedAt: performance.now(),
         radius: responsiveRadius,
         strength: 1,
@@ -312,9 +321,20 @@ export default function EdgeLattice() {
       pointer.active = false;
     };
 
+    const scheduleResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(resize, 120);
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(scheduleResize)
+        : null;
+
+    resizeObserver?.observe(document.body);
     resize();
-    window.addEventListener("resize", resize);
-    window.visualViewport?.addEventListener("resize", resize);
+    window.addEventListener("resize", scheduleResize);
+    window.visualViewport?.addEventListener("resize", scheduleResize);
     window.addEventListener("pointermove", move, { passive: true });
     window.addEventListener("pointerdown", applyLoad, { passive: true });
     document.documentElement.addEventListener("mouseleave", leave);
@@ -325,8 +345,10 @@ export default function EdgeLattice() {
     return () => {
       document.body.classList.remove("unified-field-active");
       window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", resize);
-      window.visualViewport?.removeEventListener("resize", resize);
+      window.clearTimeout(resizeTimer);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleResize);
+      window.visualViewport?.removeEventListener("resize", scheduleResize);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerdown", applyLoad);
       document.documentElement.removeEventListener("mouseleave", leave);
@@ -338,11 +360,14 @@ export default function EdgeLattice() {
       <style>{`
         body.unified-field-active::before { opacity: 0 !important; }
         .edge-lattice {
-          position: fixed !important;
-          inset: 0 !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: auto !important;
+          bottom: auto !important;
           z-index: -1;
-          width: 100vw !important;
-          height: 100vh !important;
+          width: 100% !important;
+          height: auto;
           max-width: none !important;
           pointer-events: none;
           opacity: .9;
