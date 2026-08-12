@@ -9,7 +9,7 @@ const MIN_WIDTH = 820;
 const FRAME_INTERVAL = 1000 / 30;
 const TOP_PAD = 52;
 const BOTTOM_PAD = 72;
-const ISOS = [-0.55, 0.05, 0.62];
+const ISOS = [-0.62, -0.08, 0.5];
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -60,11 +60,33 @@ export default function EdgeLattice() {
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     };
 
+    const rippleValue = (x: number, y: number, now: number) => {
+      let ripple = 0;
+
+      for (let i = impulses.length - 1; i >= 0; i -= 1) {
+        const impulse = impulses[i];
+        const age = now - impulse.t;
+        if (age > 1800) continue;
+
+        const dx = x - impulse.x;
+        const dy = y - impulse.y;
+        const distance = Math.hypot(dx, dy);
+
+        ripple +=
+          Math.sin(distance * 0.072 - age * 0.018) *
+          Math.exp(-distance * 0.0115) *
+          Math.exp(-age * 0.0026);
+      }
+
+      return ripple;
+    };
+
     const gyroidField = (x: number, y: number, now: number) => {
-      const t = reducedMotion.matches ? 0 : now * 0.00022;
-      const sx = x * 0.018;
-      const sy = y * 0.016;
-      const sz = t + x * 0.008 - y * 0.006;
+      const t = reducedMotion.matches ? 0 : now * 0.0005;
+      const ripple = rippleValue(x, y, now);
+      const sx = x * 0.017 + t * 1.25 + ripple * 0.6;
+      const sy = y * 0.015 - t * 0.8 - ripple * 0.45;
+      const sz = x * 0.007 - y * 0.005 + t * 1.6 + ripple * 0.7;
 
       return (
         Math.sin(sx) * Math.cos(sy) +
@@ -99,28 +121,16 @@ export default function EdgeLattice() {
       const intersections: { edge: string; point: Point }[] = [];
 
       if ((v0 < iso && v1 >= iso) || (v0 >= iso && v1 < iso)) {
-        intersections.push({
-          edge: "top",
-          point: lerpEdge(topLeft, topRight, v0, v1, iso),
-        });
+        intersections.push({ edge: "top", point: lerpEdge(topLeft, topRight, v0, v1, iso) });
       }
       if ((v1 < iso && v2 >= iso) || (v1 >= iso && v2 < iso)) {
-        intersections.push({
-          edge: "right",
-          point: lerpEdge(topRight, bottomRight, v1, v2, iso),
-        });
+        intersections.push({ edge: "right", point: lerpEdge(topRight, bottomRight, v1, v2, iso) });
       }
       if ((v2 < iso && v3 >= iso) || (v2 >= iso && v3 < iso)) {
-        intersections.push({
-          edge: "bottom",
-          point: lerpEdge(bottomRight, bottomLeft, v2, v3, iso),
-        });
+        intersections.push({ edge: "bottom", point: lerpEdge(bottomRight, bottomLeft, v2, v3, iso) });
       }
       if ((v3 < iso && v0 >= iso) || (v3 >= iso && v0 < iso)) {
-        intersections.push({
-          edge: "left",
-          point: lerpEdge(bottomLeft, topLeft, v3, v0, iso),
-        });
+        intersections.push({ edge: "left", point: lerpEdge(bottomLeft, topLeft, v3, v0, iso) });
       }
 
       if (intersections.length === 2) {
@@ -140,16 +150,9 @@ export default function EdgeLattice() {
 
         if (!top || !right || !bottom || !left) return;
 
-        const pairings: [Point, Point][] =
-          center >= iso
-            ? [
-                [top, left],
-                [right, bottom],
-              ]
-            : [
-                [top, right],
-                [bottom, left],
-              ];
+        const pairings: [Point, Point][] = center >= iso
+          ? [[top, left], [right, bottom]]
+          : [[top, right], [bottom, left]];
 
         for (const [start, end] of pairings) {
           context.beginPath();
@@ -160,38 +163,35 @@ export default function EdgeLattice() {
       }
     };
 
-    const edgeStrengthAt = (x: number) => {
+    const fieldWeightsAt = (x: number) => {
       const edgeDistance = Math.min(x, width - x);
-      const fadeBand = Math.min(380, Math.max(210, width * 0.28));
-      return 1 - clamp(edgeDistance / fadeBand, 0, 1);
+      const transitionWidth = Math.min(560, Math.max(330, width * 0.36));
+      const normalized = clamp(edgeDistance / transitionWidth, 0, 1);
+
+      return {
+        gyroid: 1 - smoothstep(0.16, 0.92, normalized),
+        dots: smoothstep(0.22, 0.86, normalized),
+        overlap: 1 - Math.abs(normalized * 2 - 1),
+      };
     };
 
-    const centerDotStrengthAt = (x: number) => {
-      const edgeDistance = Math.min(x, width - x);
-      const fadeBand = Math.min(430, Math.max(240, width * 0.31));
-      return smoothstep(fadeBand * 0.28, fadeBand, edgeDistance);
-    };
-
-    const drawGyroidEdges = (now: number) => {
-      const step = width > 1440 ? 18 : 20;
+    const drawGyroid = (now: number) => {
+      const step = width > 1500 ? 20 : 22;
       const yStart = TOP_PAD;
       const yEnd = Math.max(yStart + 160, height - BOTTOM_PAD);
 
       for (let y = yStart; y < yEnd; y += step) {
         for (let x = 0; x < width; x += step) {
+          const weights = fieldWeightsAt(x + step * 0.5);
+          if (weights.gyroid < 0.012) continue;
+
           const topLeft = { x, y };
           const topRight = { x: Math.min(x + step, width), y };
           const bottomRight = {
             x: Math.min(x + step, width),
             y: Math.min(y + step, yEnd),
           };
-          const bottomLeft = {
-            x,
-            y: Math.min(y + step, yEnd),
-          };
-
-          const blend = edgeStrengthAt(x + step * 0.5);
-          if (blend < 0.015) continue;
+          const bottomLeft = { x, y: Math.min(y + step, yEnd) };
 
           const values: [number, number, number, number] = [
             gyroidField(topLeft.x, topLeft.y, now),
@@ -200,49 +200,26 @@ export default function EdgeLattice() {
             gyroidField(bottomLeft.x, bottomLeft.y, now),
           ];
 
+          const pulse = Math.min(1, Math.abs(rippleValue(x + step * 0.5, y + step * 0.5, now)));
+
           for (const iso of ISOS) {
             const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
-            const alpha = (0.03 + isoWeight * 0.12) * Math.pow(blend, 1.55);
-            const widthScale = 0.65 + isoWeight * 0.95 + blend * 1.15;
+            const alpha =
+              (0.035 + isoWeight * 0.11 + pulse * 0.16) *
+              Math.pow(weights.gyroid, 1.2);
+            const widthScale =
+              0.7 + isoWeight * 0.85 + weights.gyroid * 1.05 + pulse * 1.4;
 
-            context.strokeStyle = `rgba(120, 221, 255, ${alpha})`;
+            context.strokeStyle = `rgba(118, 222, 255, ${alpha})`;
             context.lineWidth = widthScale;
-            drawContourCell(
-              [topLeft, topRight, bottomRight, bottomLeft],
-              values,
-              iso,
-            );
+            drawContourCell([topLeft, topRight, bottomRight, bottomLeft], values, iso);
           }
         }
       }
     };
 
-    const rippleValue = (x: number, y: number, now: number) => {
-      let ripple = 0;
-
-      for (let i = impulses.length - 1; i >= 0; i -= 1) {
-        const impulse = impulses[i];
-        const age = now - impulse.t;
-
-        if (age > 1800) continue;
-
-        const dx = x - impulse.x;
-        const dy = y - impulse.y;
-        const distance = Math.hypot(dx, dy);
-
-        const wave =
-          Math.sin(distance * 0.075 - age * 0.018) *
-          Math.exp(-distance * 0.012) *
-          Math.exp(-age * 0.0028);
-
-        ripple += wave;
-      }
-
-      return ripple;
-    };
-
     const drawDots = (now: number) => {
-      const gap = width > 1500 ? 28 : 30;
+      const gap = width > 1500 ? 46 : 50;
       const yStart = TOP_PAD;
       const yEnd = Math.max(yStart + 160, height - BOTTOM_PAD);
 
@@ -250,23 +227,30 @@ export default function EdgeLattice() {
         const offset = (Math.floor(y / gap) % 2) * gap * 0.5;
 
         for (let x = offset; x < width; x += gap) {
-          const centerBlend = centerDotStrengthAt(x);
-          if (centerBlend < 0.03) continue;
+          const weights = fieldWeightsAt(x);
+          if (weights.dots < 0.02) continue;
 
           const ripple = rippleValue(x, y, now);
+          const field = gyroidField(x, y, now);
+          const transitionWarp = weights.overlap * field * 2.4;
+          const drawX = x + transitionWarp;
+          const drawY = y + weights.overlap * Math.sin(field * 1.7) * 2.4;
+
           const radius =
-            0.55 +
-            centerBlend * 1.35 +
-            Math.max(0, ripple) * 2.15;
+            0.42 +
+            weights.dots * 0.8 +
+            weights.overlap * 0.34 +
+            Math.max(0, ripple) * 2.25;
 
           const alpha =
-            0.035 +
-            centerBlend * 0.16 +
-            Math.min(0.16, Math.abs(ripple) * 0.12);
+            0.025 +
+            weights.dots * 0.09 +
+            weights.overlap * 0.045 +
+            Math.min(0.16, Math.abs(ripple) * 0.14);
 
           context.beginPath();
-          context.arc(x, y, radius, 0, Math.PI * 2);
-          context.fillStyle = `rgba(160, 225, 255, ${alpha})`;
+          context.arc(drawX, drawY, radius, 0, Math.PI * 2);
+          context.fillStyle = `rgba(158, 225, 255, ${alpha})`;
           context.fill();
         }
       }
@@ -289,7 +273,7 @@ export default function EdgeLattice() {
       context.clearRect(0, 0, width, height);
 
       if (wideEnough.matches) {
-        drawGyroidEdges(now);
+        drawGyroid(now);
         drawDots(now);
       }
 
@@ -309,10 +293,7 @@ export default function EdgeLattice() {
       });
 
       if (impulses.length > 5) impulses.shift();
-
-      if (reducedMotion.matches) {
-        draw(performance.now());
-      }
+      if (reducedMotion.matches) draw(performance.now());
     };
 
     resize();
@@ -328,11 +309,8 @@ export default function EdgeLattice() {
     window.visualViewport?.addEventListener("resize", resize);
     window.addEventListener("pointerdown", addImpulse, { passive: true });
 
-    if (reducedMotion.matches) {
-      draw(performance.now());
-    } else {
-      frame = window.requestAnimationFrame(draw);
-    }
+    if (reducedMotion.matches) draw(performance.now());
+    else frame = window.requestAnimationFrame(draw);
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -358,7 +336,7 @@ export default function EdgeLattice() {
           height: auto;
           max-width: none !important;
           pointer-events: none;
-          opacity: .95;
+          opacity: .92;
           mask-image: none !important;
           -webkit-mask-image: none !important;
         }
