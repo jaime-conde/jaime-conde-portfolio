@@ -2,24 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-type Point3D = {
-  x: number;
-  y: number;
-  z: number;
-  row: number;
-  column: number;
-  layer: number;
-  hoverEnergy: number;
-  loadEnergy: number;
-};
-
-type Segment = {
-  from: Point3D;
-  to: Point3D;
-  depth: number;
-  diagonal: boolean;
-};
-
 type LoadPulse = {
   x: number;
   y: number;
@@ -28,14 +10,35 @@ type LoadPulse = {
   strength: number;
 };
 
+type FieldPoint = {
+  x: number;
+  y: number;
+  hoverEnergy: number;
+  loadEnergy: number;
+};
+
 const MIN_WIDTH = 820;
+const GRID_SPACING = 31;
+const DEPTH_LAYERS = 3;
 const POINTER_RADIUS = 230;
-const CELL = 38;
-const DEPTH_LAYERS = 4;
-const WIDTH_NODES = 5;
 const FRAME_INTERVAL = 1000 / 30;
 const PULSE_DURATION = 1450;
 const MAX_PULSES = 4;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+const smoothstep = (edge0: number, edge1: number, value: number) => {
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
+const hash = (row: number, column: number, type: number, layer: number) => {
+  const value = Math.sin(
+    row * 12.9898 + column * 78.233 + type * 37.719 + layer * 19.193,
+  ) * 43758.5453;
+  return value - Math.floor(value);
+};
 
 const contourColor = (intensity: number, alpha: number) => {
   const stops = [
@@ -69,16 +72,26 @@ export default function EdgeLattice() {
     const wideEnough = window.matchMedia(`(min-width: ${MIN_WIDTH}px)`);
     const pointer = { x: -1000, y: -1000, active: false };
     const pulses: LoadPulse[] = [];
+
     let width = 0;
     let height = 0;
     let pixelRatio = 1;
     let frame = 0;
     let lastRendered = -FRAME_INTERVAL;
 
+    document.body.classList.add("unified-field-active");
+
+    const edgeBand = () => Math.min(470, Math.max(300, width * 0.27));
+
+    const connectionStrength = (x: number) => {
+      const distanceToEdge = Math.min(x, width - x);
+      return 1 - smoothstep(edgeBand() * 0.12, edgeBand(), distanceToEdge);
+    };
+
     const resize = () => {
       width = document.documentElement.clientWidth;
       height = window.innerHeight;
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.35);
       canvas.width = Math.round(width * pixelRatio);
       canvas.height = Math.round(height * pixelRatio);
       canvas.style.width = `${width}px`;
@@ -100,150 +113,71 @@ export default function EdgeLattice() {
         const distance = Math.hypot(dx, dy);
         if (distance > pulse.radius) continue;
 
-        const spatialFalloff = Math.pow(1 - distance / pulse.radius, 2);
-        const envelope = Math.sin(Math.PI * age) * Math.exp(-1.35 * age);
-        const response = spatialFalloff * envelope * pulse.strength;
+        const normalizedDistance = distance / pulse.radius;
+        const spatialFalloff = Math.pow(1 - normalizedDistance, 2);
+        const elasticEnvelope = Math.sin(Math.PI * age) * Math.exp(-1.35 * age);
+        const response = spatialFalloff * elasticEnvelope * pulse.strength;
         const directionX = distance > 0.5 ? dx / distance : 0;
         const directionY = distance > 0.5 ? dy / distance : 0;
 
-        offsetX += directionX * response * 32;
-        offsetY += directionY * response * 32;
+        offsetX += directionX * response * 25;
+        offsetY += directionY * response * 25;
         peakIntensity = Math.max(peakIntensity, Math.min(1, response * 1.55));
       }
 
       return { offsetX, offsetY, peakIntensity };
     };
 
-    const project = (
-      side: -1 | 1,
+    const pointAt = (
       row: number,
       column: number,
       layer: number,
       now: number,
-    ): Point3D => {
-      const edge = side < 0 ? 0 : width;
-      const depthRatio = layer / (DEPTH_LAYERS - 1);
-      const columnRatio = column / (WIDTH_NODES - 1);
-      const baseY = row * CELL + (column % 2) * CELL * 0.5;
-      const inward = 15 + columnRatio * Math.min(185, width * 0.11);
-      const perspectiveX = depthRatio * 54;
-      const perspectiveY = depthRatio * -18;
-      const screenX = edge - side * (inward + perspectiveX);
-      const screenY = baseY + perspectiveY;
-      const distance = Math.hypot(pointer.x - screenX, pointer.y - screenY);
-      const influence = pointer.active ? Math.max(0, 1 - distance / POINTER_RADIUS) : 0;
+    ): FieldPoint => {
+      const depth = layer / Math.max(1, DEPTH_LAYERS - 1);
+      const baseX = GRID_SPACING / 2 + column * GRID_SPACING + depth * 8;
+      const baseY = GRID_SPACING / 2 + row * GRID_SPACING - depth * 6;
+      const distance = Math.hypot(pointer.x - baseX, pointer.y - baseY);
+      const influence = pointer.active
+        ? Math.max(0, 1 - distance / POINTER_RADIUS)
+        : 0;
       const hoverEnergy = influence * influence * (3 - 2 * influence);
-      const direction = distance > 1 ? (screenY - pointer.y) / distance : 0;
-      const breathing = reducedMotion.matches
-        ? 0
-        : Math.sin(now * 0.00125 + row * 0.42 + layer) * 1.2;
-      const load = pulseResponse(screenX, screenY, now);
+      const hoverDirectionX = distance > 0.5 ? (baseX - pointer.x) / distance : 0;
+      const hoverDirectionY = distance > 0.5 ? (baseY - pointer.y) / distance : 0;
+      const load = pulseResponse(baseX, baseY, now);
 
       return {
-        x:
-          screenX +
-          side * hoverEnergy * (22 + depthRatio * 18) +
-          load.offsetX,
-        y:
-          screenY +
-          direction * hoverEnergy * 22 +
-          breathing * depthRatio +
-          load.offsetY,
-        z: depthRatio,
-        row,
-        column,
-        layer,
+        x: baseX + hoverDirectionX * hoverEnergy * 16 + load.offsetX,
+        y: baseY + hoverDirectionY * hoverEnergy * 16 + load.offsetY,
         hoverEnergy,
         loadEnergy: load.peakIntensity,
       };
     };
 
-    const createVolume = (side: -1 | 1, now: number) => {
-      const points = new Map<string, Point3D>();
-      const segments: Segment[] = [];
-      const rows = Math.ceil(height / CELL) + 3;
-      const key = (row: number, column: number, layer: number) => `${row}:${column}:${layer}`;
+    const drawConnection = (
+      from: FieldPoint,
+      to: FieldPoint,
+      strength: number,
+      layer: number,
+      diagonal: boolean,
+    ) => {
+      const hoverEnergy = Math.max(from.hoverEnergy, to.hoverEnergy);
+      const loadEnergy = Math.max(from.loadEnergy, to.loadEnergy);
+      const layerFade = 1 - layer * 0.26;
+      const baseAlpha = (diagonal ? 0.055 : 0.085) * strength * layerFade;
 
-      for (let layer = 0; layer < DEPTH_LAYERS; layer += 1) {
-        for (let column = 0; column < WIDTH_NODES; column += 1) {
-          for (let row = -2; row < rows; row += 1) {
-            points.set(key(row, column, layer), project(side, row, column, layer, now));
-          }
-        }
-      }
-
-      const connect = (
-        point: Point3D,
-        row: number,
-        column: number,
-        layer: number,
-        diagonal = false,
-      ) => {
-        const target = points.get(key(row, column, layer));
-        if (!target) return;
-        segments.push({
-          from: point,
-          to: target,
-          depth: (point.z + target.z) * 0.5,
-          diagonal,
-        });
-      };
-
-      for (const point of points.values()) {
-        connect(point, point.row + 1, point.column, point.layer);
-        connect(point, point.row, point.column + 1, point.layer);
-        connect(point, point.row, point.column, point.layer + 1);
-
-        const flip = (point.row + point.column + point.layer) % 2 === 0 ? 1 : -1;
-        connect(point, point.row + flip, point.column + 1, point.layer + 1, true);
-        connect(point, point.row - flip, point.column + 1, point.layer + 1, true);
-      }
-
-      return { points: [...points.values()], segments };
-    };
-
-    const drawVolume = (side: -1 | 1, now: number) => {
-      const { points, segments } = createVolume(side, now);
-      segments.sort((a, b) => b.depth - a.depth);
-
-      for (const segment of segments) {
-        const hoverEnergy = Math.max(segment.from.hoverEnergy, segment.to.hoverEnergy);
-        const loadEnergy = Math.max(segment.from.loadEnergy, segment.to.loadEnergy);
-        const depthFade = 0.2 + (1 - segment.depth) * 0.8;
-        const baseAlpha = segment.diagonal ? 0.075 : 0.1;
-        context.beginPath();
-        context.moveTo(segment.from.x, segment.from.y);
-        context.lineTo(segment.to.x, segment.to.y);
-        context.strokeStyle =
-          loadEnergy > 0.015
-            ? contourColor(loadEnergy, (0.28 + loadEnergy * 0.62) * depthFade)
-            : hoverEnergy > 0.015
-              ? `rgba(102, 226, 255, ${(0.14 + hoverEnergy * 0.42) * depthFade})`
-              : `rgba(105, 174, 207, ${baseAlpha * depthFade})`;
-        context.lineWidth =
-          (segment.diagonal ? 0.55 : 0.72) + hoverEnergy * 1.15 + loadEnergy * 1.4;
-        context.stroke();
-      }
-
-      points.sort((a, b) => b.z - a.z);
-      for (const point of points) {
-        const depthFade = 0.25 + (1 - point.z) * 0.75;
-        context.beginPath();
-        context.arc(
-          point.x,
-          point.y,
-          0.75 + point.hoverEnergy * 2.25 + point.loadEnergy * 2.5,
-          0,
-          Math.PI * 2,
-        );
-        context.fillStyle =
-          point.loadEnergy > 0.015
-            ? contourColor(point.loadEnergy, (0.4 + point.loadEnergy * 0.54) * depthFade)
-            : point.hoverEnergy > 0.015
-              ? `rgba(151, 238, 255, ${(0.3 + point.hoverEnergy * 0.62) * depthFade})`
-              : `rgba(153, 207, 232, ${0.18 * depthFade})`;
-        context.fill();
-      }
+      context.beginPath();
+      context.moveTo(from.x, from.y);
+      context.lineTo(to.x, to.y);
+      context.strokeStyle =
+        loadEnergy > 0.015
+          ? contourColor(loadEnergy, (0.22 + loadEnergy * 0.58) * strength * layerFade)
+          : hoverEnergy > 0.015
+            ? `rgba(102, 226, 255, ${(0.11 + hoverEnergy * 0.32) * strength * layerFade})`
+            : `rgba(105, 174, 207, ${baseAlpha})`;
+      context.lineWidth =
+        (diagonal ? 0.48 : 0.66) + hoverEnergy * 0.85 + loadEnergy * 1.1;
+      context.stroke();
     };
 
     const draw = (now: number) => {
@@ -254,9 +188,94 @@ export default function EdgeLattice() {
       lastRendered = now;
       context.clearRect(0, 0, width, height);
 
+      const rows = Math.ceil(height / GRID_SPACING) + 1;
+      const columns = Math.ceil(width / GRID_SPACING) + 1;
+
       if (wideEnough.matches) {
-        drawVolume(-1, now);
-        drawVolume(1, now);
+        for (let layer = DEPTH_LAYERS - 1; layer >= 0; layer -= 1) {
+          const points: FieldPoint[][] = [];
+          for (let row = 0; row < rows; row += 1) {
+            const rowPoints: FieldPoint[] = [];
+            for (let column = 0; column < columns; column += 1) {
+              rowPoints.push(pointAt(row, column, layer, now));
+            }
+            points.push(rowPoints);
+          }
+
+          for (let row = 0; row < rows; row += 1) {
+            for (let column = 0; column < columns; column += 1) {
+              const point = points[row][column];
+              const strength = connectionStrength(point.x);
+              if (strength <= 0.015) continue;
+
+              const probability = Math.pow(strength, 1.25);
+              const layerPenalty = layer * 0.09;
+
+              if (
+                column + 1 < columns &&
+                hash(row, column, 0, layer) < probability - layerPenalty
+              ) {
+                drawConnection(point, points[row][column + 1], strength, layer, false);
+              }
+
+              if (
+                row + 1 < rows &&
+                hash(row, column, 1, layer) < probability * 0.92 - layerPenalty
+              ) {
+                drawConnection(point, points[row + 1][column], strength, layer, false);
+              }
+
+              if (
+                row + 1 < rows &&
+                column + 1 < columns &&
+                hash(row, column, 2, layer) < probability * 0.72 - layerPenalty
+              ) {
+                const target = (row + column + layer) % 2 === 0
+                  ? points[row + 1][column + 1]
+                  : points[row + 1][column];
+                drawConnection(point, target, strength, layer, true);
+              }
+            }
+          }
+        }
+      }
+
+      for (let row = 0; row < rows; row += 1) {
+        for (let column = 0; column < columns; column += 1) {
+          const point = pointAt(row, column, 0, now);
+          const strength = connectionStrength(point.x);
+          const dotBlend = 1 - strength;
+          const dotRadius =
+            0.58 + point.hoverEnergy * 1.7 + point.loadEnergy * 2.35 + strength * 0.18;
+          const idleAlpha = 0.16 + dotBlend * 0.05;
+
+          context.beginPath();
+          context.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+          context.fillStyle =
+            point.loadEnergy > 0.015
+              ? contourColor(point.loadEnergy, 0.36 + point.loadEnergy * 0.54)
+              : point.hoverEnergy > 0.015
+                ? `rgba(151, 238, 255, ${0.26 + point.hoverEnergy * 0.5})`
+                : `rgba(175, 222, 255, ${idleAlpha})`;
+          context.fill();
+        }
+      }
+
+      for (const pulse of pulses) {
+        const age = (now - pulse.startedAt) / PULSE_DURATION;
+        if (age < 0 || age > 1) continue;
+        const progress = 1 - Math.pow(1 - age, 2);
+        context.beginPath();
+        context.arc(
+          pulse.x,
+          pulse.y,
+          12 + pulse.radius * 0.25 * progress,
+          0,
+          Math.PI * 2,
+        );
+        context.strokeStyle = `rgba(81, 220, 255, ${0.18 * (1 - age)})`;
+        context.lineWidth = 1;
+        context.stroke();
       }
 
       for (let index = pulses.length - 1; index >= 0; index -= 1) {
@@ -304,6 +323,7 @@ export default function EdgeLattice() {
     else frame = window.requestAnimationFrame(draw);
 
     return () => {
+      document.body.classList.remove("unified-field-active");
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       window.visualViewport?.removeEventListener("resize", resize);
@@ -316,36 +336,18 @@ export default function EdgeLattice() {
   return (
     <>
       <style>{`
+        body.unified-field-active::before { opacity: 0 !important; }
         .edge-lattice {
           position: fixed !important;
           inset: 0 !important;
+          z-index: -1;
           width: 100vw !important;
           height: 100vh !important;
           max-width: none !important;
-          mask-image: linear-gradient(
-            to right,
-            black 0%,
-            black 14%,
-            rgba(0,0,0,.78) 20%,
-            transparent 29%,
-            transparent 71%,
-            rgba(0,0,0,.78) 80%,
-            black 86%,
-            black 100%
-          ) !important;
-          -webkit-mask-image: linear-gradient(
-            to right,
-            black 0%,
-            black 14%,
-            rgba(0,0,0,.78) 20%,
-            transparent 29%,
-            transparent 71%,
-            rgba(0,0,0,.78) 80%,
-            black 86%,
-            black 100%
-          ) !important;
-          mask-composite: add !important;
-          -webkit-mask-composite: source-over !important;
+          pointer-events: none;
+          opacity: .9;
+          mask-image: none !important;
+          -webkit-mask-image: none !important;
         }
       `}</style>
       <canvas ref={canvasRef} className="edge-lattice" aria-hidden="true" />
