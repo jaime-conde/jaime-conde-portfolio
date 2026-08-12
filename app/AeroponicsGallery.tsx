@@ -14,8 +14,8 @@ const slides = [
   {
     src: `${base}aeroponic-automation-landscape.webp`,
     alt: "Automation hardware being tested on the aeroponic tower",
-    title: "Automation attempt",
-    detail: "Testing the controls and hardware intended to automate system operation.",
+    title: "In progress",
+    detail: "Aeroponics automation prototype integrating pH, EC/TDS, and water-temperature sensors with an OLED interface for nutrient monitoring and setup validation.",
   },
 ];
 
