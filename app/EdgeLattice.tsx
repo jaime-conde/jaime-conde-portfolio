@@ -9,9 +9,9 @@ type Layer = { phase: number; offsetX: number; offsetY: number; alpha: number; w
 
 const MIN_WIDTH = 820;
 const SAMPLE_STEP = 16;
-const INTERACTION_RADIUS = 250;
-const CLICK_RADIUS = 330;
-const CLICK_DURATION = 850;
+const HOVER_RADIUS = 190;
+const CLICK_RADIUS = 320;
+const CLICK_DURATION = 820;
 const ISOS = [-0.45, 0.18];
 const LAYERS: Layer[] = [
   { phase: 0, offsetX: 0, offsetY: 0, alpha: 1, width: 1 },
@@ -38,8 +38,8 @@ export default function EdgeLattice() {
     const interactionCanvas = interactionRef.current;
     if (!baseCanvas || !interactionCanvas) return;
 
-    const baseCtx: CanvasRenderingContext2D = baseCanvas.getContext("2d")!;
-    const overlayCtx: CanvasRenderingContext2D = interactionCanvas.getContext("2d")!;
+    const baseCtx = baseCanvas.getContext("2d");
+    const overlayCtx = interactionCanvas.getContext("2d");
     if (!baseCtx || !overlayCtx) return;
 
     const wideEnough = window.matchMedia(`(min-width: ${MIN_WIDTH}px)`);
@@ -69,7 +69,8 @@ export default function EdgeLattice() {
       let hover = 0;
       if (pointer.active) {
         const distance = Math.hypot(pointer.x - x, pointer.y - y);
-        hover = 1 - smoothstep(0, INTERACTION_RADIUS, distance);
+        const radial = 1 - smoothstep(0, HOVER_RADIUS, distance);
+        hover = radial * radial;
       }
 
       let click = 0;
@@ -77,11 +78,9 @@ export default function EdgeLattice() {
         const age = now - impulse.t;
         if (age > CLICK_DURATION) continue;
         const distance = Math.hypot(impulse.x - x, impulse.y - y);
-        click = Math.max(
-          click,
-          (1 - smoothstep(0, CLICK_RADIUS, distance)) *
-            (1 - smoothstep(0, CLICK_DURATION, age)),
-        );
+        const spatial = 1 - smoothstep(0, CLICK_RADIUS, distance);
+        const temporal = 1 - smoothstep(0, CLICK_DURATION, age);
+        click = Math.max(click, spatial * temporal);
       }
       return { hover, click };
     };
@@ -90,10 +89,10 @@ export default function EdgeLattice() {
       const scale = localCellScale(x);
       const baseFrequency = (Math.PI * 2) / Math.max(7, scale * 2.35);
       const interaction = interactive ? interactionStrength(x, y, now) : { hover: 0, click: 0 };
-      const frequency = baseFrequency * (1 + interaction.hover * 0.5 + interaction.click * 1.25);
-      const sx = x * frequency + phase + interaction.click * 2.4;
-      const sy = y * frequency * 0.92 - phase * 0.58 - interaction.hover * 0.32;
-      const sz = x * frequency * 0.54 - y * frequency * 0.29 + phase * 1.08 + interaction.click * 2.9;
+      const frequency = baseFrequency * (1 + interaction.hover * 0.12 + interaction.click * 0.72);
+      const sx = x * frequency + phase + interaction.click * 1.7;
+      const sy = y * frequency * 0.92 - phase * 0.58 - interaction.hover * 0.06;
+      const sz = x * frequency * 0.54 - y * frequency * 0.29 + phase * 1.08 + interaction.click * 2.1;
 
       return (
         Math.sin(sx) * Math.cos(sy) +
@@ -131,7 +130,6 @@ export default function EdgeLattice() {
       const bottom = hits.find((entry) => entry.edge === "bottom")?.point;
       const left = hits.find((entry) => entry.edge === "left")?.point;
       if (!top || !right || !bottom || !left) return [];
-
       return center >= iso ? [[top, left], [right, bottom]] : [[top, right], [bottom, left]];
     };
 
@@ -193,8 +191,11 @@ export default function EdgeLattice() {
         for (let y = startY; y < yEnd; y += SAMPLE_STEP) {
           for (let x = startX; x < rangeEnd; x += SAMPLE_STEP) {
             const centerX = x + SAMPLE_STEP * 0.5;
+            const centerY = y + SAMPLE_STEP * 0.5;
             const transition = transitionAt(centerX);
-            const activeLayers = transition < 0.34 ? 3 : transition < 0.58 ? 2 : 1;
+            const interaction = interactive ? interactionStrength(centerX, centerY, now) : { hover: 0, click: 0 };
+            const baseLayers = transition < 0.34 ? 3 : transition < 0.58 ? 2 : 1;
+            const activeLayers = interactive && interaction.click < 0.08 ? 1 : baseLayers;
             const activeIsos = transition < 0.56 ? ISOS : [0.18];
 
             for (let layerIndex = 0; layerIndex < activeLayers; layerIndex += 1) {
@@ -210,9 +211,8 @@ export default function EdgeLattice() {
                 gyroid(bottomLeft.x, bottomLeft.y, layer.phase, now, interactive),
               ];
 
-              const interaction = interactive ? interactionStrength(centerX, y + SAMPLE_STEP * 0.5, now) : { hover: 0, click: 0 };
               const edgePresence = 1 - smoothstep(0.25, 1, transition);
-              const interactionBoost = 1 + interaction.hover * 0.42 + interaction.click * 1;
+              const interactionBoost = 1 + interaction.hover * 0.12 + interaction.click * 0.78;
 
               for (const iso of activeIsos) {
                 const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
@@ -265,10 +265,10 @@ export default function EdgeLattice() {
     };
 
     const dirtyRectFor = (x: number, y: number, radius: number) => ({
-      x: Math.max(0, x - radius - 36),
-      y: Math.max(0, y - radius - 36),
-      w: Math.min(width, radius * 2 + 72),
-      h: Math.min(height, radius * 2 + 72),
+      x: Math.max(0, x - radius - 24),
+      y: Math.max(0, y - radius - 24),
+      w: Math.min(width, radius * 2 + 48),
+      h: Math.min(height, radius * 2 + 48),
     });
 
     const clearDirty = (rect: { x: number; y: number; w: number; h: number } | null) => {
@@ -282,7 +282,7 @@ export default function EdgeLattice() {
 
       let centerX = pointer.x;
       let centerY = pointer.y;
-      let radius = pointer.active ? INTERACTION_RADIUS : 0;
+      let radius = pointer.active ? HOVER_RADIUS : 0;
       for (const impulse of impulses) {
         centerX = impulse.x;
         centerY = impulse.y;
@@ -296,15 +296,8 @@ export default function EdgeLattice() {
       if (nextDirty && Math.min(centerX, width - centerX) <= edgeBand() + radius) {
         overlayCtx.save();
         overlayCtx.beginPath();
-        overlayCtx.rect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
+        overlayCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
         overlayCtx.clip();
-
-        const veil = overlayCtx.createRadialGradient(centerX, centerY, radius * 0.08, centerX, centerY, radius);
-        veil.addColorStop(0, "rgba(3, 8, 18, 0.36)");
-        veil.addColorStop(0.68, "rgba(3, 8, 18, 0.16)");
-        veil.addColorStop(1, "rgba(3, 8, 18, 0)");
-        overlayCtx.fillStyle = veil;
-        overlayCtx.fillRect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
 
         drawBand(
           overlayCtx,
@@ -333,7 +326,7 @@ export default function EdgeLattice() {
       pointer.y = event.pageY;
       pointer.active = true;
       const now = performance.now();
-      if (now - lastHoverDraw > 48) {
+      if (now - lastHoverDraw > 64) {
         lastHoverDraw = now;
         requestInteraction();
       }
@@ -396,7 +389,7 @@ export default function EdgeLattice() {
           -webkit-mask-image: none !important;
         }
         .edge-lattice-base { opacity: .9; }
-        .edge-lattice-interaction { opacity: 1; }
+        .edge-lattice-interaction { opacity: .72; }
         @media (max-width: 819px) {
           .edge-lattice-layer { display: none !important; }
         }
