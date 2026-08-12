@@ -15,4 +15,4 @@ npm run dev
 
 ## Deployment
 
-The site is exported as static HTML and deployed automatically through GitHub Actions whenever `main` changes. The public repository excludes private ChatGPT Sites metadata, credentials, dependencies, and generated build files.
+The site is exported as static HTML and deployed automatically through GitHub Actions whenever `main` changes. The public repository excludes credentials, dependencies, temporary project files, and generated build output.
