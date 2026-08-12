@@ -83,6 +83,7 @@ export default function EdgeLattice() {
     const clickRadiusAt = (x: number) => lerp(CLICK_MIN, CLICK_MAX, edgeInfluence(x));
     const interactionScaleAt = (x: number) => lerp(0.5, 1, edgeInfluence(x));
     const clickStrengthAt = (x: number) => lerp(0.88, 1, edgeInfluence(x));
+    const hoverEnabledAt = (x: number) => edgeInfluence(x) > 0.28;
 
     const pulseResponse = (x: number, y: number, now: number) => {
       let offsetX = 0;
@@ -115,7 +116,7 @@ export default function EdgeLattice() {
       let hoverEnergy = 0;
       let hoverOffsetX = 0;
       let hoverOffsetY = 0;
-      if (interactive && pointer.active) {
+      if (interactive && pointer.active && hoverEnabledAt(pointer.x)) {
         const radius = hoverRadiusAt(pointer.x);
         const distance = Math.hypot(pointer.x - baseX, pointer.y - baseY);
         const influence = Math.max(0, 1 - distance / radius);
@@ -266,7 +267,10 @@ export default function EdgeLattice() {
     };
 
     const currentDirty = () => {
-      let dirty: Rect | null = pointer.active ? rectFor(pointer.x, pointer.y, hoverRadiusAt(pointer.x)) : null;
+      let dirty: Rect | null =
+        pointer.active && hoverEnabledAt(pointer.x)
+          ? rectFor(pointer.x, pointer.y, hoverRadiusAt(pointer.x))
+          : null;
       for (const pulse of pulses) dirty = union(dirty, rectFor(pulse.x, pulse.y, pulse.radius));
       return dirty;
     };
@@ -296,11 +300,22 @@ export default function EdgeLattice() {
 
     const move = (event: PointerEvent) => {
       if (event.pointerType === "touch" || reducedMotion.matches) return;
-      pointer.x = event.pageX;
-      pointer.y = event.pageY;
-      pointer.active = true;
+
+      const nextX = event.pageX;
+      const nextY = event.pageY;
+      const nextHoverActive = hoverEnabledAt(nextX);
+      const hoverStateChanged = pointer.active !== nextHoverActive;
+
+      pointer.x = nextX;
+      pointer.y = nextY;
+      pointer.active = nextHoverActive;
+
       const now = performance.now();
-      if (now - hoverTimer > 42) {
+      if (hoverStateChanged) {
+        requestInteraction();
+        return;
+      }
+      if (nextHoverActive && now - hoverTimer > 42) {
         hoverTimer = now;
         requestInteraction();
       }
