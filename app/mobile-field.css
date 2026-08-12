@@ -1,0 +1,6 @@
+@media (max-width: 819px) {
+  .edge-lattice {
+    display: block !important;
+    opacity: .82;
+  }
+}
