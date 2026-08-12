@@ -5,51 +5,45 @@ import { useEffect, useRef } from "react";
 type Point = { x: number; y: number };
 type PointerState = { x: number; y: number; active: boolean };
 type Impulse = { x: number; y: number; t: number };
-
-type Layer = {
-  phase: number;
-  offsetX: number;
-  offsetY: number;
-  alpha: number;
-  width: number;
-};
+type Layer = { phase: number; offsetX: number; offsetY: number; alpha: number; width: number };
 
 const MIN_WIDTH = 820;
-const STEP = 30;
-const HOVER_RADIUS = 260;
-const CLICK_RADIUS = 350;
+const SAMPLE_STEP = 16;
+const INTERACTION_RADIUS = 250;
+const CLICK_RADIUS = 330;
 const CLICK_DURATION = 850;
-const ISOS = [-0.48, 0.12, 0.64];
+const ISOS = [-0.45, 0.18];
 const LAYERS: Layer[] = [
   { phase: 0, offsetX: 0, offsetY: 0, alpha: 1, width: 1 },
-  { phase: 1.2, offsetX: 6, offsetY: -4, alpha: 0.42, width: 0.82 },
-  { phase: 2.3, offsetX: 11, offsetY: -8, alpha: 0.2, width: 0.68 },
+  { phase: 1.15, offsetX: 5, offsetY: -4, alpha: 0.38, width: 0.78 },
+  { phase: 2.2, offsetX: 9, offsetY: -7, alpha: 0.2, width: 0.64 },
 ];
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const smoothstep = (edge0: number, edge1: number, value: number) => {
   const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
 };
+const hash2 = (x: number, y: number) => {
+  const value = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return value - Math.floor(value);
+};
 
 export default function EdgeLattice() {
   const baseRef = useRef<HTMLCanvasElement>(null);
-  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const interactionRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const baseCanvas = baseRef.current;
-    const overlayCanvas = overlayRef.current;
-    if (!baseCanvas || !overlayCanvas) return;
+    const interactionCanvas = interactionRef.current;
+    if (!baseCanvas || !interactionCanvas) return;
 
-    const baseContext = baseCanvas.getContext("2d");
-    const overlayContext = overlayCanvas.getContext("2d");
-    if (!baseContext || !overlayContext) return;
+    const baseCtx: CanvasRenderingContext2D = baseCanvas.getContext("2d")!;
+    const overlayCtx: CanvasRenderingContext2D = interactionCanvas.getContext("2d")!;
+    if (!baseCtx || !overlayCtx) return;
 
-    const base = baseContext;
-    const overlay = overlayContext;
     const wideEnough = window.matchMedia(`(min-width: ${MIN_WIDTH}px)`);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const pointer: PointerState = { x: -1000, y: -1000, active: false };
     const impulses: Impulse[] = [];
 
@@ -58,27 +52,24 @@ export default function EdgeLattice() {
     let pixelRatio = 1;
     let frame = 0;
     let resizeTimer = 0;
+    let lastDirty: { x: number; y: number; w: number; h: number } | null = null;
 
-    const pageHeight = () =>
-      Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-        document.documentElement.clientHeight,
-        window.innerHeight,
-      );
+    const pageHeight = () => Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight,
+      document.documentElement.clientHeight,
+      window.innerHeight,
+    );
 
-    const transitionAt = (x: number) => {
-      const half = Math.max(1, width * 0.5);
-      const edgeDistance = Math.min(x, width - x);
-      return smoothstep(0.06, 0.95, clamp(edgeDistance / half, 0, 1));
-    };
+    const edgeBand = () => Math.min(430, Math.max(300, width * 0.255));
+    const transitionAt = (x: number) => clamp(Math.min(x, width - x) / edgeBand(), 0, 1);
+    const localCellScale = (x: number) => 46 - 34 * smoothstep(0.05, 0.95, transitionAt(x));
 
-    const localCellSize = (x: number) => 38 - transitionAt(x) * 30;
-
-    const interactionAt = (x: number, y: number, now: number) => {
+    const interactionStrength = (x: number, y: number, now: number) => {
       let hover = 0;
       if (pointer.active) {
-        hover = 1 - smoothstep(0, HOVER_RADIUS, Math.hypot(pointer.x - x, pointer.y - y));
+        const distance = Math.hypot(pointer.x - x, pointer.y - y);
+        hover = 1 - smoothstep(0, INTERACTION_RADIUS, distance);
       }
 
       let click = 0;
@@ -86,35 +77,23 @@ export default function EdgeLattice() {
         const age = now - impulse.t;
         if (age > CLICK_DURATION) continue;
         const distance = Math.hypot(impulse.x - x, impulse.y - y);
-        const spatial = 1 - smoothstep(0, CLICK_RADIUS, distance);
-        const temporal = 1 - smoothstep(0, CLICK_DURATION, age);
-        click = Math.max(click, spatial * temporal);
+        click = Math.max(
+          click,
+          (1 - smoothstep(0, CLICK_RADIUS, distance)) *
+            (1 - smoothstep(0, CLICK_DURATION, age)),
+        );
       }
-
       return { hover, click };
     };
 
-    const gyroid = (
-      x: number,
-      y: number,
-      phase: number,
-      now: number,
-      interactive: boolean,
-    ) => {
-      const cellSize = localCellSize(x);
-      const interaction = interactive ? interactionAt(x, y, now) : { hover: 0, click: 0 };
-      const frequency =
-        (Math.PI * 2) /
-        Math.max(7, cellSize * 2.65) *
-        (1 + interaction.hover * 0.48 + interaction.click * 1.2);
-
-      const sx = x * frequency + phase + interaction.click * 1.9;
-      const sy = y * frequency * 0.94 - phase * 0.58 - interaction.hover * 0.3;
-      const sz =
-        x * frequency * 0.52 -
-        y * frequency * 0.32 +
-        phase * 1.08 +
-        interaction.click * 2.55;
+    const gyroid = (x: number, y: number, phase: number, now = 0, interactive = false) => {
+      const scale = localCellScale(x);
+      const baseFrequency = (Math.PI * 2) / Math.max(7, scale * 2.35);
+      const interaction = interactive ? interactionStrength(x, y, now) : { hover: 0, click: 0 };
+      const frequency = baseFrequency * (1 + interaction.hover * 0.5 + interaction.click * 1.25);
+      const sx = x * frequency + phase + interaction.click * 2.4;
+      const sy = y * frequency * 0.92 - phase * 0.58 - interaction.hover * 0.32;
+      const sz = x * frequency * 0.54 - y * frequency * 0.29 + phase * 1.08 + interaction.click * 2.9;
 
       return (
         Math.sin(sx) * Math.cos(sy) +
@@ -123,126 +102,137 @@ export default function EdgeLattice() {
       );
     };
 
-    const lerp = (a: Point, b: Point, va: number, vb: number, iso: number) => {
-      const d = vb - va;
-      const t = Math.abs(d) < 1e-6 ? 0.5 : (iso - va) / d;
+    const lerpEdge = (a: Point, b: Point, valueA: number, valueB: number, iso: number): Point => {
+      const denominator = valueB - valueA;
+      const t = Math.abs(denominator) < 1e-6 ? 0.5 : (iso - valueA) / denominator;
       return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
     };
 
-    const segmentsForCell = (
+    const contourSegments = (
       corners: [Point, Point, Point, Point],
       values: [number, number, number, number],
       iso: number,
     ): [Point, Point][] => {
-      const [tl, tr, br, bl] = corners;
+      const [topLeft, topRight, bottomRight, bottomLeft] = corners;
       const [v0, v1, v2, v3] = values;
       const hits: { edge: string; point: Point }[] = [];
 
-      if ((v0 < iso) !== (v1 < iso)) hits.push({ edge: "t", point: lerp(tl, tr, v0, v1, iso) });
-      if ((v1 < iso) !== (v2 < iso)) hits.push({ edge: "r", point: lerp(tr, br, v1, v2, iso) });
-      if ((v2 < iso) !== (v3 < iso)) hits.push({ edge: "b", point: lerp(br, bl, v2, v3, iso) });
-      if ((v3 < iso) !== (v0 < iso)) hits.push({ edge: "l", point: lerp(bl, tl, v3, v0, iso) });
+      if ((v0 < iso) !== (v1 < iso)) hits.push({ edge: "top", point: lerpEdge(topLeft, topRight, v0, v1, iso) });
+      if ((v1 < iso) !== (v2 < iso)) hits.push({ edge: "right", point: lerpEdge(topRight, bottomRight, v1, v2, iso) });
+      if ((v2 < iso) !== (v3 < iso)) hits.push({ edge: "bottom", point: lerpEdge(bottomRight, bottomLeft, v2, v3, iso) });
+      if ((v3 < iso) !== (v0 < iso)) hits.push({ edge: "left", point: lerpEdge(bottomLeft, topLeft, v3, v0, iso) });
 
       if (hits.length === 2) return [[hits[0].point, hits[1].point]];
       if (hits.length !== 4) return [];
 
-      const top = hits.find((h) => h.edge === "t")?.point;
-      const right = hits.find((h) => h.edge === "r")?.point;
-      const bottom = hits.find((h) => h.edge === "b")?.point;
-      const left = hits.find((h) => h.edge === "l")?.point;
+      const center = (v0 + v1 + v2 + v3) * 0.25;
+      const top = hits.find((entry) => entry.edge === "top")?.point;
+      const right = hits.find((entry) => entry.edge === "right")?.point;
+      const bottom = hits.find((entry) => entry.edge === "bottom")?.point;
+      const left = hits.find((entry) => entry.edge === "left")?.point;
       if (!top || !right || !bottom || !left) return [];
 
-      const center = (v0 + v1 + v2 + v3) * 0.25;
-      return center >= iso
-        ? [[top, left], [right, bottom]]
-        : [[top, right], [bottom, left]];
+      return center >= iso ? [[top, left], [right, bottom]] : [[top, right], [bottom, left]];
     };
 
-    const drawSegment = (
-      context: CanvasRenderingContext2D,
+    const drawSegmentOrDot = (
+      ctx: CanvasRenderingContext2D,
       start: Point,
       end: Point,
       transition: number,
       alpha: number,
       lineWidth: number,
+      seedX: number,
+      seedY: number,
     ) => {
-      const midX = (start.x + end.x) * 0.5;
-      const midY = (start.y + end.y) * 0.5;
-      const scale = Math.pow(1 - transition, 1.55);
+      const midpoint = { x: (start.x + end.x) * 0.5, y: (start.y + end.y) * 0.5 };
+      const shrink = 1 - smoothstep(0.48, 0.9, transition);
 
-      if (scale < 0.18) {
-        context.beginPath();
-        context.arc(midX, midY, 0.5 + (1 - transition) * 0.35, 0, Math.PI * 2);
-        context.fillStyle = `rgba(158, 226, 255, ${alpha * 0.75})`;
-        context.fill();
+      if (transition > 0.64) {
+        const keepChance = 0.62 - smoothstep(0.64, 1, transition) * 0.38;
+        if (hash2(seedX, seedY) > keepChance) return;
+        ctx.beginPath();
+        ctx.arc(midpoint.x, midpoint.y, 0.44 + (1 - transition) * 0.46, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(158, 226, 255, ${alpha * (0.38 + (1 - transition) * 0.32)})`;
+        ctx.fill();
         return;
       }
 
-      context.beginPath();
-      context.moveTo(midX + (start.x - midX) * scale, midY + (start.y - midY) * scale);
-      context.lineTo(midX + (end.x - midX) * scale, midY + (end.y - midY) * scale);
-      context.strokeStyle = `rgba(119, 222, 248, ${alpha})`;
-      context.lineWidth = lineWidth * (0.55 + 0.45 * scale);
-      context.stroke();
+      const a = { x: midpoint.x + (start.x - midpoint.x) * shrink, y: midpoint.y + (start.y - midpoint.y) * shrink };
+      const b = { x: midpoint.x + (end.x - midpoint.x) * shrink, y: midpoint.y + (end.y - midpoint.y) * shrink };
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = `rgba(119, 222, 248, ${alpha})`;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
     };
 
-    const drawRegion = (
-      context: CanvasRenderingContext2D,
+    const drawBand = (
+      ctx: CanvasRenderingContext2D,
       minX: number,
       minY: number,
       maxX: number,
       maxY: number,
-      now: number,
-      interactive: boolean,
+      now = 0,
+      interactive = false,
     ) => {
       if (!wideEnough.matches) return;
 
-      const yStart = Math.max(52, minY);
-      const yEnd = Math.min(Math.max(200, height - 72), maxY);
-      const xStart = Math.max(0, minX);
-      const xEnd = Math.min(width, maxX);
+      const band = edgeBand();
+      const yStart = Math.max(56, minY);
+      const yEnd = Math.min(height - 72, maxY);
+      const ranges: [number, number][] = [];
+      if (minX < band) ranges.push([Math.max(0, minX), Math.min(band, maxX)]);
+      if (maxX > width - band) ranges.push([Math.max(width - band, minX), Math.min(width, maxX)]);
 
-      for (let y = yStart; y < yEnd; y += STEP) {
-        for (let x = xStart; x < xEnd; x += STEP) {
-          const centerX = x + STEP * 0.5;
-          const transition = transitionAt(centerX);
-          const layerCount = transition > 0.62 ? 1 : transition > 0.34 ? 2 : 3;
-          const isos = transition > 0.72 ? [0.12] : ISOS;
+      for (const [rangeStart, rangeEnd] of ranges) {
+        const startX = Math.floor(rangeStart / SAMPLE_STEP) * SAMPLE_STEP;
+        const startY = Math.floor(yStart / SAMPLE_STEP) * SAMPLE_STEP;
 
-          for (let li = 0; li < layerCount; li += 1) {
-            const layer = LAYERS[li];
-            const tl = { x: x + layer.offsetX, y: y + layer.offsetY };
-            const tr = { x: Math.min(x + STEP, width) + layer.offsetX, y: y + layer.offsetY };
-            const br = {
-              x: Math.min(x + STEP, width) + layer.offsetX,
-              y: Math.min(y + STEP, yEnd) + layer.offsetY,
-            };
-            const bl = { x: x + layer.offsetX, y: Math.min(y + STEP, yEnd) + layer.offsetY };
+        for (let y = startY; y < yEnd; y += SAMPLE_STEP) {
+          for (let x = startX; x < rangeEnd; x += SAMPLE_STEP) {
+            const centerX = x + SAMPLE_STEP * 0.5;
+            const transition = transitionAt(centerX);
+            const activeLayers = transition < 0.34 ? 3 : transition < 0.58 ? 2 : 1;
+            const activeIsos = transition < 0.56 ? ISOS : [0.18];
 
-            const values: [number, number, number, number] = [
-              gyroid(tl.x, tl.y, layer.phase, now, interactive),
-              gyroid(tr.x, tr.y, layer.phase, now, interactive),
-              gyroid(br.x, br.y, layer.phase, now, interactive),
-              gyroid(bl.x, bl.y, layer.phase, now, interactive),
-            ];
+            for (let layerIndex = 0; layerIndex < activeLayers; layerIndex += 1) {
+              const layer = LAYERS[layerIndex];
+              const topLeft = { x: x + layer.offsetX, y: y + layer.offsetY };
+              const topRight = { x: Math.min(x + SAMPLE_STEP, width) + layer.offsetX, y: y + layer.offsetY };
+              const bottomRight = { x: Math.min(x + SAMPLE_STEP, width) + layer.offsetX, y: Math.min(y + SAMPLE_STEP, yEnd) + layer.offsetY };
+              const bottomLeft = { x: x + layer.offsetX, y: Math.min(y + SAMPLE_STEP, yEnd) + layer.offsetY };
+              const values: [number, number, number, number] = [
+                gyroid(topLeft.x, topLeft.y, layer.phase, now, interactive),
+                gyroid(topRight.x, topRight.y, layer.phase, now, interactive),
+                gyroid(bottomRight.x, bottomRight.y, layer.phase, now, interactive),
+                gyroid(bottomLeft.x, bottomLeft.y, layer.phase, now, interactive),
+              ];
 
-            const interaction = interactive
-              ? interactionAt(centerX, y + STEP * 0.5, now)
-              : { hover: 0, click: 0 };
-            const interactionBoost = 1 + interaction.hover * 0.45 + interaction.click * 0.95;
-            const presence = 1 - transition * 0.7;
+              const interaction = interactive ? interactionStrength(centerX, y + SAMPLE_STEP * 0.5, now) : { hover: 0, click: 0 };
+              const edgePresence = 1 - smoothstep(0.25, 1, transition);
+              const interactionBoost = 1 + interaction.hover * 0.42 + interaction.click * 1;
 
-            for (const iso of isos) {
-              const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
-              const alpha =
-                (0.045 + presence * 0.13) *
-                layer.alpha *
-                (0.72 + isoWeight * 0.28) *
-                interactionBoost;
-              const lineWidth = (0.72 + presence * 1.2 + isoWeight * 0.5) * layer.width;
+              for (const iso of activeIsos) {
+                const isoWeight = 1 - Math.min(1, Math.abs(iso) / 0.9);
+                const alpha = (0.035 + edgePresence * 0.12) * layer.alpha * (0.72 + isoWeight * 0.28) * interactionBoost;
+                const lineWidth = (0.64 + edgePresence * 0.95 + isoWeight * 0.35) * layer.width;
+                const segments = contourSegments([topLeft, topRight, bottomRight, bottomLeft], values, iso);
 
-              for (const [start, end] of segmentsForCell([tl, tr, br, bl], values, iso)) {
-                drawSegment(context, start, end, transition, alpha, lineWidth);
+                for (let index = 0; index < segments.length; index += 1) {
+                  const [start, end] = segments[index];
+                  drawSegmentOrDot(
+                    ctx,
+                    start,
+                    end,
+                    transition,
+                    alpha,
+                    lineWidth,
+                    x + layerIndex * 17 + index * 31,
+                    y + layerIndex * 23 + index * 13,
+                  );
+                }
               }
             }
           }
@@ -251,8 +241,8 @@ export default function EdgeLattice() {
     };
 
     const renderBase = () => {
-      base.clearRect(0, 0, width, height);
-      drawRegion(base, 0, 0, width, height, 0, false);
+      baseCtx.clearRect(0, 0, width, height);
+      drawBand(baseCtx, 0, 0, width, height, 0, false);
     };
 
     const sizeCanvases = () => {
@@ -260,58 +250,93 @@ export default function EdgeLattice() {
       height = pageHeight();
       pixelRatio = Math.min(window.devicePixelRatio || 1, 1.1);
 
-      for (const canvas of [baseCanvas, overlayCanvas]) {
+      for (const canvas of [baseCanvas, interactionCanvas]) {
         canvas.width = Math.max(1, Math.round(width * pixelRatio));
         canvas.height = Math.max(1, Math.round(height * pixelRatio));
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
       }
 
-      base.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      overlay.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      baseCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      overlayCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       renderBase();
-      overlay.clearRect(0, 0, width, height);
+      overlayCtx.clearRect(0, 0, width, height);
+      lastDirty = null;
     };
 
-    const requestInteraction = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(renderInteraction);
+    const dirtyRectFor = (x: number, y: number, radius: number) => ({
+      x: Math.max(0, x - radius - 36),
+      y: Math.max(0, y - radius - 36),
+      w: Math.min(width, radius * 2 + 72),
+      h: Math.min(height, radius * 2 + 72),
+    });
+
+    const clearDirty = (rect: { x: number; y: number; w: number; h: number } | null) => {
+      if (rect) overlayCtx.clearRect(rect.x, rect.y, rect.w, rect.h);
     };
 
-    const renderInteraction = (now: number) => {
+    const renderInteraction = (now = performance.now()) => {
       frame = 0;
-      for (let i = impulses.length - 1; i >= 0; i -= 1) {
-        if (now - impulses[i].t > CLICK_DURATION) impulses.splice(i, 1);
-      }
+      const active = impulses.filter((impulse) => now - impulse.t < CLICK_DURATION);
+      impulses.splice(0, impulses.length, ...active);
 
-      overlay.clearRect(0, 0, width, height);
-
-      let cx = pointer.x;
-      let cy = pointer.y;
-      let radius = pointer.active ? HOVER_RADIUS : 0;
+      let centerX = pointer.x;
+      let centerY = pointer.y;
+      let radius = pointer.active ? INTERACTION_RADIUS : 0;
       for (const impulse of impulses) {
-        cx = impulse.x;
-        cy = impulse.y;
+        centerX = impulse.x;
+        centerY = impulse.y;
         radius = Math.max(radius, CLICK_RADIUS);
       }
 
-      if (radius > 0) {
-        const minX = Math.max(0, cx - radius - 40);
-        const maxX = Math.min(width, cx + radius + 40);
-        const minY = Math.max(0, cy - radius - 40);
-        const maxY = Math.min(height, cy + radius + 40);
-        drawRegion(overlay, minX, minY, maxX, maxY, now, true);
+      const nextDirty = radius > 0 ? dirtyRectFor(centerX, centerY, radius) : null;
+      clearDirty(lastDirty);
+      clearDirty(nextDirty);
+
+      if (nextDirty && Math.min(centerX, width - centerX) <= edgeBand() + radius) {
+        overlayCtx.save();
+        overlayCtx.beginPath();
+        overlayCtx.rect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
+        overlayCtx.clip();
+
+        const veil = overlayCtx.createRadialGradient(centerX, centerY, radius * 0.08, centerX, centerY, radius);
+        veil.addColorStop(0, "rgba(3, 8, 18, 0.36)");
+        veil.addColorStop(0.68, "rgba(3, 8, 18, 0.16)");
+        veil.addColorStop(1, "rgba(3, 8, 18, 0)");
+        overlayCtx.fillStyle = veil;
+        overlayCtx.fillRect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
+
+        drawBand(
+          overlayCtx,
+          nextDirty.x,
+          nextDirty.y,
+          nextDirty.x + nextDirty.w,
+          nextDirty.y + nextDirty.h,
+          now,
+          true,
+        );
+        overlayCtx.restore();
       }
 
-      if (impulses.length > 0) frame = window.requestAnimationFrame(renderInteraction);
+      lastDirty = nextDirty;
+      if (!reducedMotion.matches && impulses.length > 0) frame = window.requestAnimationFrame(renderInteraction);
     };
 
+    const requestInteraction = () => {
+      if (!frame) frame = window.requestAnimationFrame(renderInteraction);
+    };
+
+    let lastHoverDraw = 0;
     const move = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
       pointer.x = event.pageX;
       pointer.y = event.pageY;
       pointer.active = true;
-      requestInteraction();
+      const now = performance.now();
+      if (now - lastHoverDraw > 48) {
+        lastHoverDraw = now;
+        requestInteraction();
+      }
     };
 
     const leave = () => {
@@ -332,8 +357,8 @@ export default function EdgeLattice() {
       resizeTimer = window.setTimeout(sizeCanvases, 120);
     };
 
-    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleResize) : null;
-    observer?.observe(document.body);
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleResize) : null;
+    resizeObserver?.observe(document.body);
     window.addEventListener("resize", scheduleResize);
     window.visualViewport?.addEventListener("resize", scheduleResize);
     window.addEventListener("pointermove", move, { passive: true });
@@ -345,7 +370,7 @@ export default function EdgeLattice() {
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
       window.clearTimeout(resizeTimer);
-      observer?.disconnect();
+      resizeObserver?.disconnect();
       window.removeEventListener("resize", scheduleResize);
       window.visualViewport?.removeEventListener("resize", scheduleResize);
       window.removeEventListener("pointermove", move);
@@ -357,25 +382,27 @@ export default function EdgeLattice() {
   return (
     <>
       <style>{`
-        .lattice-layer {
-          position: absolute;
-          inset: 0 auto auto 0;
+        .edge-lattice-layer {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
           z-index: -1;
-          width: 100%;
+          display: block;
+          width: 100% !important;
           height: auto;
           max-width: none !important;
           pointer-events: none;
           mask-image: none !important;
           -webkit-mask-image: none !important;
         }
-        .lattice-base { opacity: .9; }
-        .lattice-overlay { opacity: .95; }
+        .edge-lattice-base { opacity: .9; }
+        .edge-lattice-interaction { opacity: 1; }
         @media (max-width: 819px) {
-          .lattice-layer { display: none !important; }
+          .edge-lattice-layer { display: none !important; }
         }
       `}</style>
-      <canvas ref={baseRef} className="lattice-layer lattice-base" aria-hidden="true" />
-      <canvas ref={overlayRef} className="lattice-layer lattice-overlay" aria-hidden="true" />
+      <canvas ref={baseRef} className="edge-lattice edge-lattice-layer edge-lattice-base" aria-hidden="true" />
+      <canvas ref={interactionRef} className="edge-lattice-layer edge-lattice-interaction" aria-hidden="true" />
     </>
   );
 }
