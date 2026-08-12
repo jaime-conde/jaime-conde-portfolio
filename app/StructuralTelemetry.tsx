@@ -69,6 +69,23 @@ export default function StructuralTelemetry() {
     let touchVelocity = 0;
     let lastTouchSample = 0;
 
+    // Normalize pixel movement to a reference viewport so the same relative
+    // gesture produces comparable telemetry on phones, tablets, and desktops.
+    // Coarse-pointer devices receive a modest sensitivity correction because
+    // touch browsers report fewer motion samples than wheels and trackpads.
+    const getMotionScale = () => {
+      const viewportHeight = Math.max(
+        window.visualViewport?.height ?? window.innerHeight,
+        480,
+      );
+      const viewportScale = 900 / viewportHeight;
+      const touchSampleCorrection = window.matchMedia("(pointer: coarse)").matches
+        ? 1.35
+        : 1;
+
+      return Math.max(0.85, Math.min(1.7, viewportScale * touchSampleCorrection));
+    };
+
     const onTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
@@ -92,7 +109,7 @@ export default function StructuralTelemetry() {
       // virtual carriage model as a mouse wheel or trackpad.
       touchVelocity = Math.max(
         -6,
-        Math.min(6, (estimatedScrollDelta * 0.0015) / touchDeltaTime),
+        Math.min(6, (estimatedScrollDelta * 0.0015 * getMotionScale()) / touchDeltaTime),
       );
       previousTouchY = touch.clientY;
       previousTouchTime = now;
@@ -116,7 +133,10 @@ export default function StructuralTelemetry() {
       // Treat page movement as a virtual instrumented carriage. Scroll position
       // is converted to metres, then differentiated and smoothed so the values
       // react to the visitor without amplifying single-frame browser noise.
-      const scrollVelocity = Math.max(-6, Math.min(6, (deltaScroll * 0.0015) / deltaTime));
+      const scrollVelocity = Math.max(
+        -6,
+        Math.min(6, (deltaScroll * 0.0015 * getMotionScale()) / deltaTime),
+      );
       const hasRecentTouchSample = now - lastTouchSample < 100;
       const measuredVelocity = hasRecentTouchSample ? touchVelocity : scrollVelocity;
       const hasMovement = hasRecentTouchSample || deltaScroll !== 0;
