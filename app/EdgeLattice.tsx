@@ -69,7 +69,7 @@ export default function EdgeLattice() {
       const inward = 15 + columnRatio * Math.min(135, width * 0.078);
       const perspectiveX = depthRatio * 48;
       const perspectiveY = depthRatio * -18;
-      const screenX = edge + side * (inward + perspectiveX);
+      const screenX = edge - side * (inward + perspectiveX);
       const screenY = baseY + perspectiveY;
       const distance = Math.hypot(pointer.x - screenX, pointer.y - screenY);
       const influence = pointer.active ? Math.max(0, 1 - distance / POINTER_RADIUS) : 0;
