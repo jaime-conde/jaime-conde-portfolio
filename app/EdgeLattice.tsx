@@ -82,6 +82,7 @@ export default function EdgeLattice() {
     const hoverRadiusAt = (x: number) => lerp(HOVER_MIN, HOVER_MAX, edgeInfluence(x));
     const clickRadiusAt = (x: number) => lerp(CLICK_MIN, CLICK_MAX, edgeInfluence(x));
     const interactionScaleAt = (x: number) => lerp(0.5, 1, edgeInfluence(x));
+    const clickStrengthAt = (x: number) => lerp(0.88, 1, edgeInfluence(x));
 
     const pulseResponse = (x: number, y: number, now: number) => {
       let offsetX = 0;
@@ -314,7 +315,7 @@ export default function EdgeLattice() {
       if (target?.closest("a, button, input, textarea, select, summary, [role='button']")) return;
       const x = event.pageX;
       const radius = clickRadiusAt(x);
-      pulses.push({ x, y: event.pageY, startedAt: performance.now(), radius, strength: interactionScaleAt(x) });
+      pulses.push({ x, y: event.pageY, startedAt: performance.now(), radius, strength: clickStrengthAt(x) });
       if (pulses.length > MAX_PULSES) pulses.shift();
       requestInteraction();
     };
