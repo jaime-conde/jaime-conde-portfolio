@@ -7,6 +7,7 @@ import RocketGallery from "./RocketGallery";
 import TurbojetGallery from "./TurbojetGallery";
 import ExcelCarousel from "./ExcelCarousel";
 import LanguageProvider from "./LanguageProvider";
+import EdgeLattice from "./EdgeLattice";
 
 const projects = [
   {
@@ -149,6 +150,7 @@ export default function Home() {
     <LanguageProvider>
     <main>
       <FeaBackground />
+      <EdgeLattice />
       <header className="mission-bar">
         <a className="wordmark" href="#launch" aria-label="Jaime Conde, return to top">
           J.C<span>{"//"}</span>STRUCTURAL PROFILE

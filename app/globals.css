@@ -30,6 +30,27 @@ body::before {
   background-size: 31px 31px;
   mask-image: linear-gradient(to bottom, black, rgba(0,0,0,.72) 60%, transparent 96%);
 }
+.edge-lattice {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: .78;
+  mask-image:
+    linear-gradient(to bottom, transparent 54px, black 120px, black calc(100% - 90px), transparent 100%),
+    linear-gradient(to right, black 0, black 12%, transparent 20%, transparent 80%, black 88%, black 100%);
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 54px, black 120px, black calc(100% - 90px), transparent 100%),
+    linear-gradient(to right, black 0, black 12%, transparent 20%, transparent 80%, black 88%, black 100%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+@media (max-width: 819px) {
+  .edge-lattice { display: none; }
+}
 a { color: inherit; text-decoration: none; }
 img, iframe, canvas { max-width: 100%; }
 main, section, header, nav, footer,
