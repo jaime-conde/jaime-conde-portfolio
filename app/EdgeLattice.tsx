@@ -12,7 +12,7 @@ const DEPTH_LAYERS = 3;
 const PULSE_DURATION = 1200;
 const MAX_PULSES = 3;
 const HOVER_MIN = 72;
-const HOVER_MAX = 220;
+const HOVER_MAX = 160;
 const CLICK_MIN = 88;
 const CLICK_MAX = 190;
 
@@ -241,11 +241,11 @@ export default function EdgeLattice() {
       buildBase();
     };
 
-    const rectFor = (x: number, y: number, radius: number): Rect => ({
-      x: Math.max(0, x - radius - 50),
-      y: Math.max(0, y - radius - 50),
-      w: Math.min(width, radius * 2 + 100),
-      h: Math.min(height, radius * 2 + 100),
+    const rectFor = (x: number, y: number, radius: number, padding = 30): Rect => ({
+      x: Math.max(0, x - radius - padding),
+      y: Math.max(0, y - radius - padding),
+      w: Math.min(width, radius * 2 + padding * 2),
+      h: Math.min(height, radius * 2 + padding * 2),
     });
     const union = (a: Rect | null, b: Rect | null): Rect | null => {
       if (!a) return b;
@@ -269,10 +269,26 @@ export default function EdgeLattice() {
     const currentDirty = () => {
       let dirty: Rect | null =
         pointer.active && hoverEnabledAt(pointer.x)
-          ? rectFor(pointer.x, pointer.y, hoverRadiusAt(pointer.x))
+          ? rectFor(pointer.x, pointer.y, hoverRadiusAt(pointer.x), 24)
           : null;
-      for (const pulse of pulses) dirty = union(dirty, rectFor(pulse.x, pulse.y, pulse.radius));
+      for (const pulse of pulses) dirty = union(dirty, rectFor(pulse.x, pulse.y, pulse.radius, 38));
       return dirty;
+    };
+
+    const clipInteractionAreas = (ctx: CanvasRenderingContext2D) => {
+      let hasArea = false;
+      ctx.beginPath();
+      if (pointer.active && hoverEnabledAt(pointer.x)) {
+        ctx.arc(pointer.x, pointer.y, hoverRadiusAt(pointer.x) + 10, 0, Math.PI * 2);
+        hasArea = true;
+      }
+      for (const pulse of pulses) {
+        ctx.moveTo(pulse.x + pulse.radius + 12, pulse.y);
+        ctx.arc(pulse.x, pulse.y, pulse.radius + 12, 0, Math.PI * 2);
+        hasArea = true;
+      }
+      if (hasArea) ctx.clip();
+      return hasArea;
     };
 
     const renderInteraction = (now = performance.now()) => {
@@ -285,10 +301,9 @@ export default function EdgeLattice() {
       restoreRect(repaint);
       if (nextDirty) {
         context.save();
-        context.beginPath();
-        context.rect(nextDirty.x, nextDirty.y, nextDirty.w, nextDirty.h);
-        context.clip();
-        drawRegion(context, nextDirty.y, nextDirty.y + nextDirty.h, now, true);
+        if (clipInteractionAreas(context)) {
+          drawRegion(context, nextDirty.y, nextDirty.y + nextDirty.h, now, true);
+        }
         context.restore();
       }
       lastDirty = nextDirty;
