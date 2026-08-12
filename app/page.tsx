@@ -6,6 +6,7 @@ import AeroponicsGallery from "./AeroponicsGallery";
 import RocketGallery from "./RocketGallery";
 import TurbojetGallery from "./TurbojetGallery";
 import ExcelCarousel from "./ExcelCarousel";
+import LanguageProvider from "./LanguageProvider";
 
 const projects = [
   {
@@ -145,6 +146,7 @@ const skillGroups = [
 
 export default function Home() {
   return (
+    <LanguageProvider>
     <main>
       <FeaBackground />
       <header className="mission-bar">
@@ -390,5 +392,6 @@ export default function Home() {
         <a href="#launch">Return to top ↑</a>
       </footer>
     </main>
+    </LanguageProvider>
   );
 }
