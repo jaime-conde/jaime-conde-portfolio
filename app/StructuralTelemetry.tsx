@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "./LanguageProvider";
 
 type Telemetry = {
   elapsed: number;
@@ -50,6 +51,7 @@ const formatElapsed = (seconds: number) => {
 
 export default function StructuralTelemetry() {
   const [telemetry, setTelemetry] = useState<Telemetry>(initialTelemetry);
+  const { language } = useLanguage();
 
   useEffect(() => {
     const start = performance.now();
@@ -236,19 +238,26 @@ export default function StructuralTelemetry() {
       ? 0.24 + ((telemetry.visualStress - 75) / 30) * 0.10
       : 0.10 + (telemetry.visualStress / 75) * 0.08;
   const vignetteStrength = baseVignetteStrength * 0.85;
+  const isSpanish = language === "es";
+  const statusLabel = isSpanish
+    ? ({ NOMINAL: "NOMINAL", CAUTION: "PRECAUCIÓN", CRITICAL: "CRÍTICO" } as const)[telemetry.status]
+    : telemetry.status;
+  const telemetryLabel = isSpanish
+    ? `Tiempo transcurrido ${formatElapsed(telemetry.elapsed)}. Sección ${telemetry.section}. Velocidad de desplazamiento ${telemetry.velocity.toFixed(2)} metros por segundo. Aceleración ${telemetry.acceleration.toFixed(2)} metros por segundo al cuadrado. Carga inercial ${telemetry.load.toFixed(2)} kilonewtons, esfuerzo calculado ${telemetry.stress.toFixed(1)} megapascales, estado ${statusLabel.toLowerCase()}`
+    : `Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${statusLabel.toLowerCase()}`;
 
   return (
     <>
       <div
         className={`telemetry telemetry-${telemetry.status.toLowerCase()}`}
-        aria-label={`Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${telemetry.status.toLowerCase()}`}
+        aria-label={telemetryLabel}
       >
         <div className="telemetry-readouts">
           <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
           <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
-          <span><b>LOAD</b> {telemetry.load.toFixed(2)} KN</span>
-          <span><b className="stress-symbol" aria-label="sigma, normal stress">σ</b> {telemetry.stress.toFixed(1)} MPA</span>
-          <span><b>STATE</b> {telemetry.status}</span>
+          <span><b>{isSpanish ? "CARGA" : "LOAD"}</b> {telemetry.load.toFixed(2)} KN</span>
+          <span><b className="stress-symbol" aria-label={isSpanish ? "sigma, esfuerzo normal" : "sigma, normal stress"}>σ</b> {telemetry.stress.toFixed(1)} MPA</span>
+          <span><b>{isSpanish ? "ESTADO" : "STATE"}</b> {statusLabel}</span>
         </div>
         <div className="telemetry-equation" aria-hidden="true">
           <span>F = m|a| = 190 kg &times; {Math.abs(telemetry.acceleration).toFixed(2)} m/s&sup2; = {(telemetry.load * 1000).toFixed(0)} N</span>
