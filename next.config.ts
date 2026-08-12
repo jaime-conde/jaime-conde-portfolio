@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const repositoryName = "jaime-conde-portfolio";
+const repositoryName = "portfolio";
 const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
 
 const nextConfig: NextConfig = {

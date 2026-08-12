@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const base = "/jaime-conde-portfolio/images/";
+const base = "/portfolio/images/";
 
 const slides = [
   {

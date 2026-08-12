@@ -2,7 +2,7 @@
 
 Personal portfolio focused on aerostructures, structural analysis, FEA/CFD, engineering research, design projects, and STEM outreach.
 
-[View the portfolio on GitHub Pages](https://jaime-conde.github.io/jaime-conde-portfolio/)
+[View the portfolio on GitHub Pages](https://jaime-conde.github.io/portfolio/)
 
 ## Run locally
 

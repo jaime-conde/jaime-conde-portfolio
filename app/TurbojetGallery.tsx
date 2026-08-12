@@ -1,21 +1,21 @@
 const views = [
   {
     className: "turbojet-view turbojet-view-angled",
-    src: "/jaime-conde-portfolio/images/Angled View (1).jpg",
+    src: "/portfolio/images/Angled View (1).jpg",
     alt: "Angled CAD render of the small turbojet annular combustor assembly",
     label: "Assembly perspective",
     detail: "Angled view of the developing turbojet and annular combustor packaging",
   },
   {
     className: "turbojet-view",
-    src: "/jaime-conde-portfolio/images/Ignition section view (1).jpg",
+    src: "/portfolio/images/Ignition section view (1).jpg",
     alt: "Sectioned CAD render showing the ignition region of the annular combustor",
     label: "Ignition section",
     detail: "Section view of the flame-tube geometry and ignition-region layout",
   },
   {
     className: "turbojet-view",
-    src: "/jaime-conde-portfolio/images/Render view 6 (Exhaust view)-1_edited_edited.jpg",
+    src: "/portfolio/images/Render view 6 (Exhaust view)-1_edited_edited.jpg",
     alt: "Cutaway CAD render viewed from the exhaust end of the turbojet",
     label: "Exhaust-end cutaway",
     detail: "Internal packaging and flow-path context viewed from the exhaust end",

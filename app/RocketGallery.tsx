@@ -1,4 +1,4 @@
-const base = "/jaime-conde-portfolio/images/";
+const base = "/portfolio/images/";
 
 const views = [
   {

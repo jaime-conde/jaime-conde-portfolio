@@ -1,4 +1,4 @@
-const basePath = "/jaime-conde-portfolio/images/";
+const basePath = "/portfolio/images/";
 
 export default function LugCarousel() {
   return (

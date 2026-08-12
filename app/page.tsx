@@ -192,7 +192,7 @@ export default function Home() {
             <a className="button" href="#experience">View experience</a>
             <a
               className="button"
-              href="/jaime-conde-portfolio/downloads/Jaime-Conde-Resume.pdf"
+              href="/portfolio/downloads/Jaime-Conde-Resume.pdf"
               download
             >
               Download résumé ↓
@@ -210,7 +210,7 @@ export default function Home() {
           <div className="stress-contour" aria-hidden="true" />
           <div className="portrait">
             <img
-              src="/jaime-conde-portfolio/images/jaime-conde-headshot.webp"
+              src="/portfolio/images/jaime-conde-headshot.webp"
               alt="Jaime Conde"
             />
           </div>
@@ -321,7 +321,7 @@ export default function Home() {
                   <li>Seasonal income tracking and charts</li>
                 </ul>
               </div>
-              <a className="excel-download" href="/jaime-conde-portfolio/downloads/Cash-Allocation-Portfolio-Sample.xlsx" download>
+              <a className="excel-download" href="/portfolio/downloads/Cash-Allocation-Portfolio-Sample.xlsx" download>
                 <span>Download sanitized workbook</span>
                 <b aria-hidden="true">↓</b>
               </a>

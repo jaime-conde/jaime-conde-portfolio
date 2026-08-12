@@ -3,11 +3,11 @@
 import { useState } from "react";
 
 const sheets = [
-  { src: "/jaime-conde-portfolio/images/excel-dashboard.webp", name: "Dashboard", alt: "Excel dashboard showing cash allocation assumptions and annual projections" },
-  { src: "/jaime-conde-portfolio/images/excel-annual-inputs.webp", name: "Annual Inputs", alt: "Excel annual inputs sheet for cash-flow planning" },
-  { src: "/jaime-conde-portfolio/images/excel-check-allocator.webp", name: "Check Allocator", alt: "Excel check allocation calculator with linked budgeting formulas" },
-  { src: "/jaime-conde-portfolio/images/excel-spending-tracker.webp", name: "Spending Tracker", alt: "Excel spending tracker with seasonal income and temperature charts" },
-  { src: "/jaime-conde-portfolio/images/excel-lists.webp", name: "Lists", alt: "Excel reference lists used by the calculator's lookup formulas" },
+  { src: "/portfolio/images/excel-dashboard.webp", name: "Dashboard", alt: "Excel dashboard showing cash allocation assumptions and annual projections" },
+  { src: "/portfolio/images/excel-annual-inputs.webp", name: "Annual Inputs", alt: "Excel annual inputs sheet for cash-flow planning" },
+  { src: "/portfolio/images/excel-check-allocator.webp", name: "Check Allocator", alt: "Excel check allocation calculator with linked budgeting formulas" },
+  { src: "/portfolio/images/excel-spending-tracker.webp", name: "Spending Tracker", alt: "Excel spending tracker with seasonal income and temperature charts" },
+  { src: "/portfolio/images/excel-lists.webp", name: "Lists", alt: "Excel reference lists used by the calculator's lookup formulas" },
 ];
 
 export default function ExcelCarousel() {

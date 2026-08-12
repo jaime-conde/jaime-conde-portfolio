@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const posterUrl =
-  "/jaime-conde-portfolio/images/Computational%20analysis%20of%20metal%20effects%20on%20ethylene%20insertion%20in%20Group%204%20metallocene%20analogs.pdf";
+  "/portfolio/images/Computational%20analysis%20of%20metal%20effects%20on%20ethylene%20insertion%20in%20Group%204%20metallocene%20analogs.pdf";
 
 export default function ResearchCarousel() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -68,7 +68,7 @@ export default function ResearchCarousel() {
             aria-label="SURS presentation photo, slide 2 of 2"
           >
             <img
-              src="/jaime-conde-portfolio/images/SURS%20Poster%20image.png"
+              src="/portfolio/images/SURS%20Poster%20image.png"
               alt="Jaime Conde presenting computational chemistry research at the 2026 Summer Undergraduate Research Symposium"
             />
           </figure>

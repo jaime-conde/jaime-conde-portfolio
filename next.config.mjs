@@ -1,5 +1,5 @@
 const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
-const repositoryBasePath = "/jaime-conde-portfolio";
+const repositoryBasePath = "/portfolio";
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
