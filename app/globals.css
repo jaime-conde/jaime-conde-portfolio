@@ -55,11 +55,12 @@ h1, h2, h3, p, a, span, strong, small { overflow-wrap: break-word; }
   font: 600 10px/1 var(--font-geist-mono), monospace;
   letter-spacing: .18em;
   text-transform: uppercase;
+  gap: 16px;
 }
-.wordmark { color: var(--cyan); }
+.wordmark { flex: 0 0 auto; color: var(--cyan); }
 .wordmark span { color: var(--muted); margin: 0 10px; }
-.telemetry { display: grid; gap: 5px; color: #a7b5c5; font-variant-numeric: tabular-nums; }
-.telemetry-readouts { display: flex; gap: 22px; }
+.telemetry { min-width: 0; display: grid; gap: 5px; color: #a7b5c5; font-variant-numeric: tabular-nums; }
+.telemetry-readouts { display: flex; justify-content: flex-end; gap: 22px; white-space: nowrap; }
 .telemetry-readouts > span { min-width: 106px; }
 .telemetry .telemetry-time { min-width: 104px; color: var(--cyan); }
 .telemetry .telemetry-time b { margin-right: 5px; }
@@ -849,14 +850,18 @@ h1, h2, h3, p, a, span, strong, small { overflow-wrap: break-word; }
 footer { display: flex; justify-content: space-between; padding: 28px 0 42px; border-top: 1px solid var(--line); color: #60738a; font: 10px var(--font-geist-mono), monospace; }
 
 @media (max-width: 900px) {
-  .telemetry-readouts > span:nth-child(3), .rail { display: none; }
+  .rail { display: none; }
   .telemetry { gap: 12px; }
-  .telemetry-readouts > span { min-width: auto; }
+  .telemetry-readouts { gap: clamp(10px, 2vw, 18px); }
+  .telemetry-readouts > span,
+  .telemetry .telemetry-time,
+  .telemetry-readouts > span:last-child { min-width: auto; }
   .telemetry-equation { display: none; }
   .hero { grid-template-columns: 1fr; padding-top: 112px; }
   .hero-copy { order: 1; }
-  .portrait-wrap { --portrait-size: 292px; order: 0; min-height: 350px; }
+  .portrait-wrap { --portrait-size: 292px; order: 0; min-height: 390px; }
   .analysis-frame { width: 324px; height: 324px; }
+  .portrait-wrap p { bottom: 0; }
   .project-grid, .section-heading, .experience-grid { grid-template-columns: 1fr; gap: 28px; }
   .experience-profile { margin-top: 0; }
   .experience-profile { position: relative; top: auto; }
@@ -870,9 +875,8 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
 
 @media (max-width: 720px) {
   .mission-bar { min-height: 54px; }
-  .telemetry-readouts { gap: 12px; }
-  .telemetry-readouts > span:nth-child(2),
-  .telemetry-readouts > span:nth-child(3) { display: none; }
+  .telemetry-readouts { gap: clamp(7px, 1.8vw, 12px); }
+  .telemetry-readouts > span { font-size: 8px; letter-spacing: .04em; }
   .carousel-meta { flex-wrap: wrap; }
   .carousel-meta > div:first-child { flex: 1 1 260px; min-width: 0; }
   .carousel-dots { flex: 1 0 100%; justify-content: center; }
@@ -887,14 +891,15 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
   .wordmark { letter-spacing: .11em; }
   .wordmark span, .wordmark { font-size: 0; }
   .wordmark::before { content: "JC//"; font-size: 10px; }
-  .telemetry { gap: 10px; letter-spacing: .06em; }
-  .telemetry-readouts { gap: 9px; }
-  .telemetry-readouts > span { font-size: 8px; }
+  .mission-bar { gap: 8px; }
+  .telemetry { flex: 1 1 auto; gap: 10px; letter-spacing: .03em; }
+  .telemetry-readouts { justify-content: space-between; gap: 4px; }
+  .telemetry-readouts > span { font-size: 7px; }
   .telemetry .telemetry-time { min-width: auto; }
   .hero { padding-bottom: 56px; gap: 36px; }
   .hero h1 { font-size: clamp(40px, 13.5vw, 51px); }
   .lede { font-size: 17px; }
-  .portrait-wrap { --portrait-size: min(246px, calc(100vw - 64px)); min-height: 310px; }
+  .portrait-wrap { --portrait-size: min(246px, calc(100vw - 64px)); min-height: 340px; }
   .analysis-frame { width: min(270px, calc(100vw - 40px)); height: min(270px, calc(100vw - 40px)); }
   .trajectory { grid-template-columns: 1fr; gap: 8px; padding-bottom: 56px; }
   .trajectory i { display: none; }
@@ -950,12 +955,11 @@ footer { display: flex; justify-content: space-between; padding: 28px 0 42px; bo
 @media (max-width: 390px) {
   .shell { width: calc(100% - 24px); }
   .mission-bar { padding-inline: 10px; }
-  .telemetry-readouts > .telemetry-time { display: none; }
   .telemetry-readouts > span:last-child { min-width: auto; }
   .hero { padding-top: 94px; }
   .hero-actions { display: grid; grid-template-columns: 1fr; }
   .hero .hero-actions .button { width: 100%; text-align: center; }
-  .portrait-wrap p { font-size: 8px; letter-spacing: .12em; }
+  .portrait-wrap p { width: calc(100vw - 32px); font-size: 8px; letter-spacing: .1em; white-space: nowrap; }
   .experience-domains { grid-template-columns: 1fr; }
   .experience-domains span,
   .experience-domains span:nth-child(2n),
