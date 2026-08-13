@@ -71,22 +71,23 @@ export default function StructuralTelemetry() {
     let touchVelocity = 0;
     let lastTouchSample = 0;
 
-    // Normalize pixel movement to a reference viewport so the same relative
-    // gesture produces comparable telemetry on phones, tablets, and desktops.
-    // Coarse-pointer devices receive a modest sensitivity correction because
-    // touch browsers report fewer motion samples than wheels and trackpads.
+    // Scale motion by the viewport's shorter dimension so a gesture covering
+    // the same fraction of the screen produces comparable telemetry on phones,
+    // tablets, and desktops. Touch gets a small correction for sparse sampling.
     const getMotionScale = () => {
-      const viewportHeight = Math.max(
-        window.visualViewport?.height ?? window.innerHeight,
-        480,
-      );
-      const viewportScale = 900 / viewportHeight;
-      const touchSampleCorrection = window.matchMedia("(pointer: coarse)").matches
-        ? 1.35
-        : 1;
+      const viewportWidth = Math.max(window.visualViewport?.width ?? window.innerWidth, 320);
+      const viewportHeight = Math.max(window.visualViewport?.height ?? window.innerHeight, 320);
+      const shortSide = Math.min(viewportWidth, viewportHeight);
+      const referenceDistance = Math.max(180, shortSide * 0.42);
+      const touchSampleCorrection = window.matchMedia("(pointer: coarse)").matches ? 1.15 : 1;
 
-      return Math.max(0.85, Math.min(1.7, viewportScale * touchSampleCorrection));
+      return touchSampleCorrection / referenceDistance;
     };
+
+    const normalizedVelocity = (pixelDelta: number, deltaTime: number) => Math.max(
+      -6,
+      Math.min(6, (pixelDelta * 0.9 * getMotionScale()) / Math.max(deltaTime, 0.001)),
+    );
 
     const onTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
@@ -109,10 +110,7 @@ export default function StructuralTelemetry() {
       // Mobile browsers may throttle scroll-position updates while a finger is
       // down. Measure the gesture directly so touch scrolling drives the same
       // virtual carriage model as a mouse wheel or trackpad.
-      touchVelocity = Math.max(
-        -6,
-        Math.min(6, (estimatedScrollDelta * 0.0015 * getMotionScale()) / touchDeltaTime),
-      );
+      touchVelocity = normalizedVelocity(estimatedScrollDelta, touchDeltaTime);
       previousTouchY = touch.clientY;
       previousTouchTime = now;
       lastTouchSample = now;
@@ -133,16 +131,13 @@ export default function StructuralTelemetry() {
       const deltaScroll = window.scrollY - previousScrollY;
 
       // Treat page movement as a virtual instrumented carriage. Scroll position
-      // is converted to metres, then differentiated and smoothed so the values
-      // react to the visitor without amplifying single-frame browser noise.
-      const scrollVelocity = Math.max(
-        -6,
-        Math.min(6, (deltaScroll * 0.0015 * getMotionScale()) / deltaTime),
-      );
-      const hasRecentTouchSample = now - lastTouchSample < 100;
+      // is normalized to the viewport before differentiation so the telemetry
+      // remains consistent across screen sizes.
+      const scrollVelocity = normalizedVelocity(deltaScroll, deltaTime);
+      const hasRecentTouchSample = now - lastTouchSample < 160;
       const measuredVelocity = hasRecentTouchSample ? touchVelocity : scrollVelocity;
       const hasMovement = hasRecentTouchSample || deltaScroll !== 0;
-      const velocityBlend = hasMovement ? 0.24 : 0.08;
+      const velocityBlend = hasMovement ? 0.30 : 0.08;
       velocity += (measuredVelocity - velocity) * velocityBlend;
       const measuredAcceleration = (velocity - previousVelocity) / deltaTime;
       acceleration += (Math.max(-30, Math.min(30, measuredAcceleration)) - acceleration) * 0.16;
@@ -244,7 +239,7 @@ export default function StructuralTelemetry() {
     : telemetry.status;
   const telemetryLabel = isSpanish
     ? `Tiempo transcurrido ${formatElapsed(telemetry.elapsed)}. Sección ${telemetry.section}. Velocidad de desplazamiento ${telemetry.velocity.toFixed(2)} metros por segundo. Aceleración ${telemetry.acceleration.toFixed(2)} metros por segundo al cuadrado. Carga inercial ${telemetry.load.toFixed(2)} kilonewtons, esfuerzo calculado ${telemetry.stress.toFixed(1)} megapascales, estado ${statusLabel.toLowerCase()}`
-    : `Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${statusLabel.toLowerCase()}`;
+    : `Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascales, status ${statusLabel.toLowerCase()}`;
 
   return (
     <>
