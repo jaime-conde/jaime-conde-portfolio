@@ -30,15 +30,15 @@
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    height: min(68vh, 500px) !important;
-    min-height: 360px;
+    height: min(48vh, 360px) !important;
+    min-height: 260px;
     overflow: hidden;
   }
 }
 
 @media (max-width: 390px) {
   .project-document-viewer {
-    height: min(64vh, 430px) !important;
-    min-height: 330px;
+    height: min(44vh, 320px) !important;
+    min-height: 240px;
   }
 }
