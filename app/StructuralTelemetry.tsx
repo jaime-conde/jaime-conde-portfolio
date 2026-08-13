@@ -74,13 +74,14 @@ export default function StructuralTelemetry() {
 
     // Scale motion by the viewport's shorter dimension so a gesture covering
     // the same fraction of the screen produces comparable telemetry on phones,
-    // tablets, and desktops. Touch gets extra gain for sparse iOS sampling.
+    // tablets, and desktops. Touch receives additional gain because iOS emits
+    // fewer movement samples than desktop wheel and trackpad input.
     const getMotionScale = () => {
       const viewportWidth = Math.max(window.visualViewport?.width ?? window.innerWidth, 320);
       const viewportHeight = Math.max(window.visualViewport?.height ?? window.innerHeight, 320);
       const shortSide = Math.min(viewportWidth, viewportHeight);
       const referenceDistance = Math.max(180, shortSide * 0.42);
-      const touchSampleCorrection = coarsePointer ? 1.5 : 1;
+      const touchSampleCorrection = coarsePointer ? 1.9 : 1;
 
       return touchSampleCorrection / referenceDistance;
     };
@@ -138,10 +139,14 @@ export default function StructuralTelemetry() {
       const hasRecentTouchSample = now - lastTouchSample < 160;
       const measuredVelocity = hasRecentTouchSample ? touchVelocity : scrollVelocity;
       const hasMovement = hasRecentTouchSample || deltaScroll !== 0;
-      const velocityBlend = hasMovement ? (coarsePointer ? 0.40 : 0.30) : 0.08;
+      const velocityBlend = hasMovement ? (coarsePointer ? 0.46 : 0.30) : 0.08;
       velocity += (measuredVelocity - velocity) * velocityBlend;
       const measuredAcceleration = (velocity - previousVelocity) / deltaTime;
-      acceleration += (Math.max(-30, Math.min(30, measuredAcceleration)) - acceleration) * 0.16;
+      const accelerationLimit = coarsePointer ? 48 : 30;
+      const accelerationBlend = coarsePointer ? 0.26 : 0.16;
+      acceleration += (
+        Math.max(-accelerationLimit, Math.min(accelerationLimit, measuredAcceleration)) - acceleration
+      ) * accelerationBlend;
 
       previousTime = now;
       previousScrollY = window.scrollY;
@@ -240,7 +245,7 @@ export default function StructuralTelemetry() {
     : telemetry.status;
   const telemetryLabel = isSpanish
     ? `Tiempo transcurrido ${formatElapsed(telemetry.elapsed)}. Sección ${telemetry.section}. Velocidad de desplazamiento ${telemetry.velocity.toFixed(2)} metros por segundo. Aceleración ${telemetry.acceleration.toFixed(2)} metros por segundo al cuadrado. Carga inercial ${telemetry.load.toFixed(2)} kilonewtons, esfuerzo calculado ${telemetry.stress.toFixed(1)} megapascales, estado ${statusLabel.toLowerCase()}`
-    : `Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascales, status ${statusLabel.toLowerCase()}`;
+    : `Mission elapsed time ${formatElapsed(telemetry.elapsed)}. Section ${telemetry.section}. Scroll velocity ${telemetry.velocity.toFixed(2)} metres per second. Acceleration ${telemetry.acceleration.toFixed(2)} metres per second squared. Inertial load ${telemetry.load.toFixed(2)} kilonewtons, calculated stress ${telemetry.stress.toFixed(1)} megapascals, status ${statusLabel.toLowerCase()}`;
 
   return (
     <>
