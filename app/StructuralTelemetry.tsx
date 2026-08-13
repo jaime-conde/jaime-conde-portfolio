@@ -70,16 +70,17 @@ export default function StructuralTelemetry() {
     let previousTouchTime = 0;
     let touchVelocity = 0;
     let lastTouchSample = 0;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
 
     // Scale motion by the viewport's shorter dimension so a gesture covering
     // the same fraction of the screen produces comparable telemetry on phones,
-    // tablets, and desktops. Touch gets a small correction for sparse sampling.
+    // tablets, and desktops. Touch gets extra gain for sparse iOS sampling.
     const getMotionScale = () => {
       const viewportWidth = Math.max(window.visualViewport?.width ?? window.innerWidth, 320);
       const viewportHeight = Math.max(window.visualViewport?.height ?? window.innerHeight, 320);
       const shortSide = Math.min(viewportWidth, viewportHeight);
       const referenceDistance = Math.max(180, shortSide * 0.42);
-      const touchSampleCorrection = window.matchMedia("(pointer: coarse)").matches ? 1.15 : 1;
+      const touchSampleCorrection = coarsePointer ? 1.5 : 1;
 
       return touchSampleCorrection / referenceDistance;
     };
@@ -137,7 +138,7 @@ export default function StructuralTelemetry() {
       const hasRecentTouchSample = now - lastTouchSample < 160;
       const measuredVelocity = hasRecentTouchSample ? touchVelocity : scrollVelocity;
       const hasMovement = hasRecentTouchSample || deltaScroll !== 0;
-      const velocityBlend = hasMovement ? 0.30 : 0.08;
+      const velocityBlend = hasMovement ? (coarsePointer ? 0.40 : 0.30) : 0.08;
       velocity += (measuredVelocity - velocity) * velocityBlend;
       const measuredAcceleration = (velocity - previousVelocity) / deltaTime;
       acceleration += (Math.max(-30, Math.min(30, measuredAcceleration)) - acceleration) * 0.16;
