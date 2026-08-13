@@ -27,26 +27,13 @@ const initialTelemetry: Telemetry = {
   status: "NOMINAL",
 };
 
-const sectionIds = [
-  "launch",
-  "research",
-  "design",
-  "aeroponics",
-  "rocket",
-  "turbojet",
-  "experience",
-  "toolkit",
-  "contact",
-];
+const sectionIds = ["launch","research","design","aeroponics","rocket","turbojet","experience","toolkit","contact"];
 
 const formatElapsed = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = Math.floor(seconds % 60);
-
-  return [hours, minutes, remainingSeconds]
-    .map((value) => value.toString().padStart(2, "0"))
-    .join(":");
+  return [hours, minutes, remainingSeconds].map((value) => value.toString().padStart(2, "0")).join(":");
 };
 
 export default function StructuralTelemetry() {
@@ -72,17 +59,12 @@ export default function StructuralTelemetry() {
     let lastTouchSample = 0;
     const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
 
-    // Scale motion by the viewport's shorter dimension so a gesture covering
-    // the same fraction of the screen produces comparable telemetry on phones,
-    // tablets, and desktops. Touch receives additional gain because iOS emits
-    // fewer movement samples than desktop wheel and trackpad input.
     const getMotionScale = () => {
       const viewportWidth = Math.max(window.visualViewport?.width ?? window.innerWidth, 320);
       const viewportHeight = Math.max(window.visualViewport?.height ?? window.innerHeight, 320);
       const shortSide = Math.min(viewportWidth, viewportHeight);
       const referenceDistance = Math.max(180, shortSide * 0.42);
-      const touchSampleCorrection = coarsePointer ? 1.9 : 1;
-
+      const touchSampleCorrection = coarsePointer ? 1.65 : 1;
       return touchSampleCorrection / referenceDistance;
     };
 
@@ -94,7 +76,6 @@ export default function StructuralTelemetry() {
     const onTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
-
       previousTouchY = touch.clientY;
       previousTouchTime = performance.now();
       touchVelocity = 0;
@@ -104,23 +85,16 @@ export default function StructuralTelemetry() {
     const onTouchMove = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch || previousTouchY === null) return;
-
       const now = performance.now();
       const touchDeltaTime = Math.max((now - previousTouchTime) / 1000, 0.001);
       const estimatedScrollDelta = previousTouchY - touch.clientY;
-
-      // Mobile browsers may throttle scroll-position updates while a finger is
-      // down. Measure the gesture directly so touch scrolling drives the same
-      // virtual carriage model as a mouse wheel or trackpad.
       touchVelocity = normalizedVelocity(estimatedScrollDelta, touchDeltaTime);
       previousTouchY = touch.clientY;
       previousTouchTime = now;
       lastTouchSample = now;
     };
 
-    const onTouchEnd = () => {
-      previousTouchY = null;
-    };
+    const onTouchEnd = () => { previousTouchY = null; };
 
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: true });
@@ -131,22 +105,16 @@ export default function StructuralTelemetry() {
       const elapsed = (now - start) / 1000;
       const deltaTime = Math.max((now - previousTime) / 1000, 0.001);
       const deltaScroll = window.scrollY - previousScrollY;
-
-      // Treat page movement as a virtual instrumented carriage. Scroll position
-      // is normalized to the viewport before differentiation so the telemetry
-      // remains consistent across screen sizes.
       const scrollVelocity = normalizedVelocity(deltaScroll, deltaTime);
       const hasRecentTouchSample = now - lastTouchSample < 160;
       const measuredVelocity = hasRecentTouchSample ? touchVelocity : scrollVelocity;
       const hasMovement = hasRecentTouchSample || deltaScroll !== 0;
-      const velocityBlend = hasMovement ? (coarsePointer ? 0.46 : 0.30) : 0.08;
+      const velocityBlend = hasMovement ? (coarsePointer ? 0.42 : 0.30) : 0.08;
       velocity += (measuredVelocity - velocity) * velocityBlend;
       const measuredAcceleration = (velocity - previousVelocity) / deltaTime;
-      const accelerationLimit = coarsePointer ? 48 : 30;
-      const accelerationBlend = coarsePointer ? 0.26 : 0.16;
-      acceleration += (
-        Math.max(-accelerationLimit, Math.min(accelerationLimit, measuredAcceleration)) - acceleration
-      ) * accelerationBlend;
+      const accelerationLimit = coarsePointer ? 38 : 30;
+      const accelerationBlend = coarsePointer ? 0.20 : 0.16;
+      acceleration += (Math.max(-accelerationLimit, Math.min(accelerationLimit, measuredAcceleration)) - acceleration) * accelerationBlend;
 
       previousTime = now;
       previousScrollY = window.scrollY;
@@ -154,69 +122,43 @@ export default function StructuralTelemetry() {
 
       const probe = window.scrollY + window.innerHeight * 0.42;
       let section = 1;
-
       sectionIds.forEach((id, index) => {
         const element = document.getElementById(id);
         if (element && element.offsetTop <= probe) section = index + 1;
       });
 
-      // Scroll acceleration drives inertial load through F = ma. There is no
-      // static preload, so the mechanical values settle to zero at rest.
-      // Stress follows sigma = Kt(F/A), with A = 68 mm^2 and Kt = 1.32.
       const effectiveMass = 190;
       const load = (effectiveMass * Math.abs(acceleration)) / 1000;
       const stress = 1.32 * ((load * 1000) / 68);
 
-      // Keep the measured force and stress immediate, and give only the visual
-      // warning layer severity-dependent persistence. Nominal responds with no
-      // added delay. Caution lingers long enough to be readable, while critical
-      // releases sooner so the strongest warning does not dominate the page.
       if (stress >= visualStress) {
         visualStress = stress;
         if (stress >= 105) criticalHoldUntil = now + 350;
         else if (stress >= 75) cautionHoldUntil = now + 500;
       } else if (stress < 75 && visualStress < 105) {
-        const blend = now < cautionHoldUntil
-          ? 0
-          : 1 - Math.exp(-deltaTime / 1.4);
+        const blend = now < cautionHoldUntil ? 0 : 1 - Math.exp(-deltaTime / 1.4);
         visualStress += (stress - visualStress) * blend;
       } else {
         const isCriticalVisual = visualStress >= 105;
         const timeConstant = isCriticalVisual ? 0.75 : 1.4;
-        const blend = now < criticalHoldUntil && isCriticalVisual
-          ? 0
-          : 1 - Math.exp(-deltaTime / timeConstant);
+        const blend = now < criticalHoldUntil && isCriticalVisual ? 0 : 1 - Math.exp(-deltaTime / timeConstant);
         visualStress += (stress - visualStress) * blend;
       }
       if (visualStress < 0.1 && stress < 0.1) visualStress = 0;
 
-      // Hysteresis prevents the state from flickering when stress sits close
-      // to a threshold. Entry is 75/105 MPa; exit requires a clear drop.
       if (displayedStatus === "CRITICAL") {
         if (visualStress < 97) displayedStatus = visualStress >= 75 ? "CAUTION" : "NOMINAL";
       } else if (displayedStatus === "CAUTION") {
         if (visualStress >= 105) displayedStatus = "CRITICAL";
         else if (visualStress < 67) displayedStatus = "NOMINAL";
-      } else if (visualStress >= 105) {
-        displayedStatus = "CRITICAL";
-      } else if (visualStress >= 75) {
-        displayedStatus = "CAUTION";
-      }
+      } else if (visualStress >= 105) displayedStatus = "CRITICAL";
+      else if (visualStress >= 75) displayedStatus = "CAUTION";
 
       const displayedAcceleration = load < 0.002 ? 0 : (load * 1000) / effectiveMass;
 
       if (now - lastRender >= 80) {
         lastRender = now;
-        setTelemetry({
-          elapsed,
-          section,
-          velocity,
-          acceleration: displayedAcceleration,
-          load,
-          stress,
-          visualStress,
-          status: displayedStatus,
-        });
+        setTelemetry({ elapsed, section, velocity, acceleration: displayedAcceleration, load, stress, visualStress, status: displayedStatus });
       }
 
       frame = window.requestAnimationFrame(update);
@@ -249,10 +191,7 @@ export default function StructuralTelemetry() {
 
   return (
     <>
-      <div
-        className={`telemetry telemetry-${telemetry.status.toLowerCase()}`}
-        aria-label={telemetryLabel}
-      >
+      <div className={`telemetry telemetry-${telemetry.status.toLowerCase()}`} aria-label={telemetryLabel}>
         <div className="telemetry-readouts">
           <span className="telemetry-time"><b>T+</b>{formatElapsed(telemetry.elapsed)}</span>
           <span className="telemetry-velocity"><b>VEL</b> {telemetry.velocity.toFixed(2)} M/S</span>
@@ -266,11 +205,7 @@ export default function StructuralTelemetry() {
         </div>
       </div>
       {typeof document !== "undefined" && createPortal(
-        <div
-          className={`structural-vignette vignette-${telemetry.status.toLowerCase()}`}
-          style={{ "--vignette-opacity": vignetteStrength } as CSSProperties}
-          aria-hidden="true"
-        />,
+        <div className={`structural-vignette vignette-${telemetry.status.toLowerCase()}`} style={{ "--vignette-opacity": vignetteStrength } as CSSProperties} aria-hidden="true" />,
         document.body,
       )}
     </>
