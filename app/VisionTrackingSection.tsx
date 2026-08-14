@@ -27,14 +27,14 @@ export default function VisionTrackingSection() {
       <div className="project-grid">
         <div>
           <p className="project-number">CV</p>
-          <h2>Tracking fast-moving targets with YOLO, ByteTrack, and Kalman filtering</h2>
+          <h2>Tracking fast-moving targets with YOLOv8 and ByteTrack</h2>
         </div>
         <div className="project-body">
           <p>
             An independent computer-vision project focused on detecting and tracking small,
-            fast-moving aerospace targets in video. I trained a custom YOLOv8 model, tuned
-            ByteTrack for persistent target IDs, and built an OpenCV Kalman-filter model to
-            explore position and velocity prediction under noisy measurements.
+            fast-moving aerospace targets in video. I trained a custom YOLOv8 model and tuned
+            ByteTrack for persistent target IDs across frames, using OpenCV for video input,
+            annotation, and output processing.
           </p>
           <div className="metrics">
             <div><strong>81.9%</strong><span>mAP@50</span></div>
@@ -42,7 +42,7 @@ export default function VisionTrackingSection() {
             <div><strong>20</strong><span>validation epochs</span></div>
           </div>
           <div className="tags">
-            <span>Python</span><span>OpenCV</span><span>YOLOv8</span><span>ByteTrack</span><span>Kalman filtering</span><span>Computer vision</span>
+            <span>Python</span><span>OpenCV</span><span>YOLOv8</span><span>ByteTrack</span><span>Computer vision</span>
           </div>
         </div>
       </div>
