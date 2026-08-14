@@ -35,6 +35,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare browser-safe tracking demos
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          for input in \
+            public/images/Missile_vid_output.mp4 \
+            public/images/Missile_vid2_output.mp4 \
+            public/images/Missile_vid4_output.mp4
+          do
+            output="${input%.mp4}_web.mp4"
+            ffmpeg -y -i "$input" -an -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -movflags +faststart "$output"
+          done
+
       - name: Build static site
         run: npx next build
 
