@@ -21,7 +21,7 @@ export default function VisionTrackingPanel() {
       `}</style>
 
       <div className="vision-demo-head">
-        <p className="vision-kicker">Tracked output / detection + state estimation</p>
+        <p className="vision-kicker">Tracked output / detection + persistent IDs</p>
         <span>Three evaluation clips · annotated output only</span>
       </div>
       <div className="vision-demos" aria-label="Computer vision tracking demonstrations">
@@ -38,15 +38,15 @@ export default function VisionTrackingPanel() {
 
       <div className="vision-grid">
         <div>
-          <p className="vision-kicker">Tracking architecture / experimental pipeline</p>
+          <p className="vision-kicker">Tracking architecture / implemented pipeline</p>
           <div className="vision-pipeline" aria-label="Computer vision tracking pipeline">
             <div className="vision-step"><b>01 · YOLOv8</b><span>Custom-trained target detection</span></div>
             <div className="vision-step"><b>02 · ByteTrack</b><span>Persistent IDs across video frames</span></div>
-            <div className="vision-step"><b>03 · Kalman</b><span>OpenCV position-state estimation</span></div>
+            <div className="vision-step"><b>03 · OpenCV</b><span>Video capture, annotation, and output</span></div>
           </div>
           <ul className="vision-findings">
             <li>Tuned ByteTrack thresholds for small, fast-moving targets and persistent frame-to-frame association.</li>
-            <li>Built an OpenCV Kalman filter with position and velocity states to explore prediction between noisy measurements.</li>
+            <li>Processed video frame-by-frame with OpenCV while preserving tracker state between frames.</li>
             <li>Validation performance continued improving through epoch 20, with mAP@50 reaching 81.9% and mAP@50–95 reaching 40.1%.</li>
           </ul>
         </div>
