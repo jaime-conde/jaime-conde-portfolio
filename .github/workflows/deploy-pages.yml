@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -36,16 +36,19 @@ jobs:
         run: npm ci
 
       - name: Prepare browser-safe tracking demos
+        timeout-minutes: 5
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
           for input in \
             public/images/Missile_vid_output.mp4 \
             public/images/Missile_vid2_output.mp4 \
             public/images/Missile_vid4_output.mp4
           do
             output="${input%.mp4}_web.mp4"
-            ffmpeg -y -i "$input" -an -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -movflags +faststart "$output"
+            timeout 90s ffmpeg -nostdin -y -loglevel error -i "$input" -an -c:v libx264 -preset ultrafast -crf 24 -pix_fmt yuv420p -movflags +faststart "$output"
           done
 
       - name: Build static site
