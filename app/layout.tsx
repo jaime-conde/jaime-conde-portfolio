@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import VisionTrackingSection from "./VisionTrackingSection";
 import "./globals.css";
 import "./mobile-field.css";
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
+        <VisionTrackingSection />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-20NWYBJSH4"
           strategy="afterInteractive"
