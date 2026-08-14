@@ -2,9 +2,9 @@ const map50 = [0.37489,0.41890,0.50646,0.48670,0.62812,0.58370,0.65366,0.64976,0
 const map5095 = [0.12624,0.16182,0.19280,0.20987,0.25908,0.23494,0.28027,0.27799,0.28125,0.27667,0.30071,0.32861,0.34694,0.33525,0.36645,0.37209,0.38465,0.38444,0.39882,0.40069];
 
 const demos = [
-  { src: "/portfolio/images/Missile_vid_output.mp4", label: "Tracking demo 01" },
-  { src: "/portfolio/images/Missile_vid2_output.mp4", label: "Tracking demo 02" },
-  { src: "/portfolio/images/Missile_vid4_output.mp4", label: "Tracking demo 03" },
+  { src: "/portfolio/images/Missile_vid_output_web.mp4", label: "Tracking demo 01" },
+  { src: "/portfolio/images/Missile_vid2_output_web.mp4", label: "Tracking demo 02" },
+  { src: "/portfolio/images/Missile_vid4_output_web.mp4", label: "Tracking demo 03" },
 ];
 
 const pointsFor = (values: number[]) => values.map((value, index) => {
