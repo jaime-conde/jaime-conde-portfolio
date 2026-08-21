@@ -19,6 +19,22 @@ export default function VisionTrackingSection() {
     return () => host.remove();
   }, []);
 
+  useEffect(() => {
+    if (!mount || !window.location.hash) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const id = decodeURIComponent(window.location.hash.slice(1));
+        const target = document.getElementById(id);
+        if (!target) return;
+
+        target.scrollIntoView({ behavior: "auto", block: "start" });
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [mount]);
+
   if (!mount) return null;
 
   return createPortal(
@@ -33,8 +49,8 @@ export default function VisionTrackingSection() {
           <p>
             An independent computer-vision project focused on detecting and tracking small,
             fast-moving aerospace targets in video. I trained a custom YOLOv8 model and tuned
-            ByteTrack for persistent target IDs across frames, using OpenCV for video input,
-            annotation, and output processing.
+            ByteTrack for persistent target IDs across video frames, then used OpenCV to process
+            and export annotated tracking results.
           </p>
           <div className="metrics">
             <div><strong>81.9%</strong><span>mAP@50</span></div>
