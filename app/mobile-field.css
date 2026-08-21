@@ -1,6 +1,16 @@
 html body .edge-lattice { left: -16px !important; width: calc(100vw + 32px) !important; max-width: none !important; }
 
+section[id],
+footer[id] {
+  scroll-margin-top: 78px;
+}
+
 @media (max-width: 819px) {
+  section[id],
+  footer[id] {
+    scroll-margin-top: 70px;
+  }
+
   .edge-lattice {
     display: block !important;
     opacity: .82;
